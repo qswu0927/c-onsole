@@ -1,0 +1,8 @@
+{
+  "files.associations": {
+    "*.css": "css",
+    "*.vue": "html",
+    "stdio.h": "c",
+    "windows.h": "c"
+  }
+}
