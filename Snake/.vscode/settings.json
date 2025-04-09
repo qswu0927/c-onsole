@@ -3,6 +3,9 @@
     "*.css": "css",
     "*.vue": "html",
     "stdio.h": "c",
-    "windows.h": "c"
+    "windows.h": "c",
+    "window.h": "c",
+    "draw.h": "c",
+    "test.h": "c"
   }
 }

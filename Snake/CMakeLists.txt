@@ -7,7 +7,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # 添加可执行文件
 add_executable(${PROJECT_NAME} 
-                core/draw.c 
+                core/window.c 
+                core/render.c 
+                test/test.c 
                 main.c)
 
 # 其他设置
