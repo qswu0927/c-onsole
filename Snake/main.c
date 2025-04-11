@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <windows.h>
+#include <stdbool.h>
 #include <conio.h>
 #include "core/window.h"
 #include "core/render.h"
@@ -12,26 +13,22 @@ typedef enum
     RIGHT
 } Direction;
 
-typedef struct Node Node;
-struct Node
+typedef struct Node
 {
     SHORT x, y;
     struct Node *prev;
-};
+} Node;
 
 typedef struct
 {
     Node *head;
     Node *tail;
-    WORD color;
-    WORD headColor;
     Direction dir;
 } Snake;
 
 typedef struct
 {
     Node *last;
-    WORD color;
 } Food;
 
 void updateWall(Object *obj)
@@ -48,6 +45,89 @@ void updateWall(Object *obj)
     }
 }
 
+SHORT getFoodLength(Food *food)
+{
+    SHORT length = 0;
+    for (Node *node = food->last; node != NULL; node = node->prev)
+        length++;
+    return length;
+}
+
+Food *newFood()
+{
+    Food *food = (Food *)malloc(sizeof(Food));
+    food->last = NULL;
+    return food;
+}
+
+void updateFood(Food *food, Snake *snake, Scene *scene)
+{
+    if (getFoodLength(food) > 100)
+        return;
+    SHORT x = rand() % scene->w;
+    SHORT y = rand() % scene->h;
+    if (scene->buffer[y][x] != 0x0000)
+    {
+        // 下一帧再生成
+        return;
+    }
+    Node *node = (Node *)malloc(sizeof(Node));
+    node->x = x;
+    node->y = y;
+    node->prev = food->last;
+    food->last = node;
+}
+
+void addFoodToScene(Scene *scene, Food *food)
+{
+    for (Node *node = food->last; node != NULL; node = node->prev)
+    {
+        if (node->y >= 0 && node->y < scene->h && node->x >= 0 && node->x < scene->w)
+            scene->buffer[node->y][node->x] = BACKGROUND_RED;
+    }
+}
+
+bool eatFood(Food *food, Node *target)
+{
+    if (food->last == NULL)
+        return false;
+
+    Node *current = food->last;
+    Node *prev = NULL;
+
+    while (current != NULL && !(current->x == target->x && current->y == target->y))
+    {
+        prev = current;
+        current = current->prev;
+    }
+
+    if (current == NULL)
+        return false;
+
+    if (prev == NULL)
+    {
+        food->last = current->prev;
+    }
+    else
+    {
+        prev->prev = current->prev;
+    }
+    free(current);
+    return true;
+}
+
+void freeFood(Food *food)
+{
+    while (food->last != NULL)
+    {
+        Node *current = food->last;
+        food->last = food->last->prev;
+        free(current);
+    }
+    free(food);
+    food = NULL;
+}
+
 Snake *newSnake(SHORT x, SHORT y)
 {
     Snake *snake = (Snake *)malloc(sizeof(Snake));
@@ -61,7 +141,7 @@ Snake *newSnake(SHORT x, SHORT y)
     return snake;
 }
 
-void updateSnake(Snake *snake)
+void updateSnake(Snake *snake, Food *food, Scene *scene)
 {
     Node *newNode = (Node *)malloc(sizeof(Node));
     newNode->x = snake->head->x;
@@ -76,13 +156,20 @@ void updateSnake(Snake *snake)
     else if (snake->dir == RIGHT)
         newNode->x++;
 
+    // 吃到食物
+    bool eat = eatFood(food, newNode);
+
     snake->head->prev = newNode;
     snake->head = newNode;
+
     // 删除尾节点
-    Node *tail = snake->tail;
-    snake->tail = tail->prev;
-    free(tail);
-    tail = NULL;
+    if (!eat)
+    {
+        Node *tail = snake->tail;
+        snake->tail = tail->prev;
+        free(tail);
+        tail = NULL;
+    }
 }
 
 void addSnakeToScene(Scene *scene, Snake *snake)
@@ -90,7 +177,7 @@ void addSnakeToScene(Scene *scene, Snake *snake)
     for (Node *node = snake->tail; node != NULL; node = node->prev)
     {
         if (node->y >= 0 && node->y < scene->h && node->x >= 0 && node->x < scene->w)
-            scene->buffer[node->y][node->x] = BACKGROUND_GREEN;
+            scene->buffer[node->y][node->x] = node->prev == NULL ? (char)(BACKGROUND_GREEN | BACKGROUND_RED) : BACKGROUND_GREEN;
     }
 }
 
@@ -104,47 +191,6 @@ void freeSnake(Snake *snake)
     }
     free(snake);
     snake = NULL;
-}
-
-Food *newFood()
-{
-    Food *food = (Food *)malloc(sizeof(Food));
-    food->color = 0x0F;
-    food->last = NULL;
-    return food;
-}
-
-void updateFood(Food *food, Snake *snake, Scene *scene)
-{
-    if (food->last == NULL)
-    {
-        Node *node = (Node *)malloc(sizeof(Node));
-        node->x = rand() % scene->w;
-        node->y = rand() % scene->h;
-        node->prev = NULL;
-        food->last = node;
-    }
-}
-
-void addFoodToScene(Scene *scene, Food *food)
-{
-    for (Node *node = food->last; node != NULL; node = node->prev)
-    {
-        if (node->y >= 0 && node->y < scene->h && node->x >= 0 && node->x < scene->w)
-            scene->buffer[node->y][node->x] = BACKGROUND_RED;
-    }
-}
-
-void freeFood(Food *food)
-{
-    while (food->last != NULL)
-    {
-        Node *current = food->last;
-        food->last = food->last->prev;
-        free(current);
-    }
-    free(food);
-    food = NULL;
 }
 
 void keyboardControl(Snake *snake)
@@ -190,7 +236,7 @@ int main()
         updateWall(wall);
         addToScene(scene, wall);
 
-        updateSnake(snake);
+        updateSnake(snake, food, scene);
         addSnakeToScene(scene, snake);
 
         updateFood(food, snake, scene);
