@@ -6,6 +6,7 @@
     "windows.h": "c",
     "window.h": "c",
     "draw.h": "c",
-    "test.h": "c"
+    "test.h": "c",
+    "render.h": "c"
   }
 }

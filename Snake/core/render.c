@@ -44,9 +44,7 @@ void renderScene(Scene *scene)
             {
                 int index = wr * (i * scene->w + j) + k;
                 charInfo[index].Char.AsciiChar = ' ';
-                charInfo[index].Attributes = scene->buffer[i][j] == '#'   ? BACKGROUND_BLUE
-                                             : scene->buffer[i][j] == ' ' ? FOREGROUND_RED
-                                                                          : BACKGROUND_GREEN;
+                charInfo[index].Attributes = scene->buffer[i][j];
             }
         }
     }

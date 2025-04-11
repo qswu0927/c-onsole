@@ -41,9 +41,9 @@ void updateWall(Object *obj)
         for (int j = 0; j < obj->w; j++)
         {
             if (i == 0 || i == obj->h - 1 || j == 0 || j == obj->w - 1)
-                obj->buffer[i][j] = '#';
+                obj->buffer[i][j] = BACKGROUND_BLUE;
             else
-                obj->buffer[i][j] = ' ';
+                obj->buffer[i][j] = 0x0000;
         }
     }
 }
@@ -90,7 +90,7 @@ void addSnakeToScene(Scene *scene, Snake *snake)
     for (Node *node = snake->tail; node != NULL; node = node->prev)
     {
         if (node->y >= 0 && node->y < scene->h && node->x >= 0 && node->x < scene->w)
-            scene->buffer[node->y][node->x] = 1;
+            scene->buffer[node->y][node->x] = BACKGROUND_GREEN;
     }
 }
 
@@ -131,7 +131,7 @@ void addFoodToScene(Scene *scene, Food *food)
     for (Node *node = food->last; node != NULL; node = node->prev)
     {
         if (node->y >= 0 && node->y < scene->h && node->x >= 0 && node->x < scene->w)
-            scene->buffer[node->y][node->x] = 1;
+            scene->buffer[node->y][node->x] = BACKGROUND_RED;
     }
 }
 
@@ -197,7 +197,7 @@ int main()
         addFoodToScene(scene, food);
 
         renderScene(scene);
-        Sleep(50);
+        Sleep(100);
     }
 
     freeFood(food);
