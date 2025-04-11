@@ -23,8 +23,16 @@ typedef struct
 {
     Node *head;
     Node *tail;
+    WORD color;
+    WORD headColor;
     Direction dir;
 } Snake;
+
+typedef struct
+{
+    Node *last;
+    WORD color;
+} Food;
 
 void updateWall(Object *obj)
 {
@@ -98,6 +106,73 @@ void freeSnake(Snake *snake)
     snake = NULL;
 }
 
+Food *newFood()
+{
+    Food *food = (Food *)malloc(sizeof(Food));
+    food->color = 0x0F;
+    food->last = NULL;
+    return food;
+}
+
+void updateFood(Food *food, Snake *snake, Scene *scene)
+{
+    if (food->last == NULL)
+    {
+        Node *node = (Node *)malloc(sizeof(Node));
+        node->x = rand() % scene->w;
+        node->y = rand() % scene->h;
+        node->prev = NULL;
+        food->last = node;
+    }
+}
+
+void addFoodToScene(Scene *scene, Food *food)
+{
+    for (Node *node = food->last; node != NULL; node = node->prev)
+    {
+        if (node->y >= 0 && node->y < scene->h && node->x >= 0 && node->x < scene->w)
+            scene->buffer[node->y][node->x] = 1;
+    }
+}
+
+void freeFood(Food *food)
+{
+    while (food->last != NULL)
+    {
+        Node *current = food->last;
+        food->last = food->last->prev;
+        free(current);
+    }
+    free(food);
+    food = NULL;
+}
+
+void keyboardControl(Snake *snake)
+{
+    if (_kbhit())
+    {
+        switch (_getch())
+        {
+        case 'w':
+        case 'W':
+            snake->dir = UP;
+            break;
+        case 's':
+        case 'S':
+            snake->dir = DOWN;
+            break;
+        case 'a':
+        case 'A':
+            snake->dir = LEFT;
+            break;
+        case 'd':
+        case 'D':
+            snake->dir = RIGHT;
+            break;
+        }
+    }
+}
+
 int main()
 {
     SHORT w = 20, h = 20;
@@ -105,40 +180,27 @@ int main()
 
     Scene *scene = newScene(w, h);
     Object *wall = newObject(0, 0, w, h);
-    Snake *snake = newSnake(w / 2, h / 2);
+    Snake *snake = newSnake(w / 3, h / 2);
+    Food *food = newFood();
 
     while (1)
     {
-        if (_kbhit())
-        {
-            switch (_getch())
-            {
-            case 'w':
-            case 'W':
-                snake->dir = UP;
-                break;
-            case 's':
-            case 'S':
-                snake->dir = DOWN;
-                break;
-            case 'a':
-            case 'A':
-                snake->dir = LEFT;
-                break;
-            case 'd':
-            case 'D':
-                snake->dir = RIGHT;
-                break;
-            }
-        }
+        keyboardControl(snake);
+
         updateWall(wall);
         addToScene(scene, wall);
+
         updateSnake(snake);
         addSnakeToScene(scene, snake);
+
+        updateFood(food, snake, scene);
+        addFoodToScene(scene, food);
+
         renderScene(scene);
         Sleep(50);
     }
 
+    freeFood(food);
     freeSnake(snake);
     freeObject(wall);
     freeScene(scene);
