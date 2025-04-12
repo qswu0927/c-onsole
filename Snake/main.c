@@ -31,6 +31,19 @@ typedef struct
     Node *last;
 } Food;
 
+bool isAlive(Snake *snake, Scene *scene)
+{
+    if (snake->head->x <= 0 || snake->head->x >= scene->w - 1 || snake->head->y <= 0 || snake->head->y >= scene->h - 1)
+        return false;
+
+    for (Node *node = snake->tail; node != snake->head; node = node->prev)
+    {
+        if (node->x == snake->head->x && node->y == snake->head->y)
+            return false;
+    }
+    return true;
+}
+
 void updateWall(Object *obj)
 {
     for (int i = 0; i < obj->h; i++)
@@ -201,19 +214,23 @@ void keyboardControl(Snake *snake)
         {
         case 'w':
         case 'W':
-            snake->dir = UP;
+            if (snake->dir != DOWN)
+                snake->dir = UP;
             break;
         case 's':
         case 'S':
-            snake->dir = DOWN;
+            if (snake->dir != UP)
+                snake->dir = DOWN;
             break;
         case 'a':
         case 'A':
-            snake->dir = LEFT;
+            if (snake->dir != RIGHT)
+                snake->dir = LEFT;
             break;
         case 'd':
         case 'D':
-            snake->dir = RIGHT;
+            if (snake->dir != LEFT)
+                snake->dir = RIGHT;
             break;
         }
     }
@@ -234,15 +251,17 @@ int main()
         keyboardControl(snake);
 
         updateWall(wall);
-        addToScene(scene, wall);
-
         updateSnake(snake, food, scene);
-        addSnakeToScene(scene, snake);
-
         updateFood(food, snake, scene);
+
+        addToScene(scene, wall);
+        addSnakeToScene(scene, snake);
         addFoodToScene(scene, food);
 
         renderScene(scene);
+        if (!isAlive(snake, scene))
+            break;
+
         Sleep(100);
     }
 
@@ -251,5 +270,7 @@ int main()
     freeObject(wall);
     freeScene(scene);
     CloseHandle(hConsole);
+
+    getchar();
     return 0;
 }
