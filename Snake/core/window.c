@@ -111,7 +111,7 @@ HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title)
     SetConsoleTitleW(title);
 
     // 设置控制台字体，其他推荐：|新宋体|黑体|MS Gothic
-    setConsoleFont(hConsole, 10, L"新宋体");
+    setConsoleFont(hConsole, 18, L"黑体");
 
     hideConsoleCursor();
 
