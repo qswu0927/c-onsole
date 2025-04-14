@@ -4,6 +4,7 @@
 #include <conio.h>
 #include "core/window.h"
 #include "core/render.h"
+#include "test/test.h"
 
 typedef enum
 {
@@ -270,6 +271,8 @@ void keyboardControl(Snake *snake)
 
 int main()
 {
+    testChessboard();
+    return 0;
 start:
     SHORT w = 20, h = 20;
     HANDLE hConsole = setupConsole(w, h, L"贪吃蛇");
