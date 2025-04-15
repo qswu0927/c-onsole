@@ -23,9 +23,8 @@ typedef struct Node
 
 typedef struct
 {
-    // 为方便删除尾节点，链表方向为从尾到头
+    // 为方便操作节点，链表从尾指向头
     Node *tail;
-    Node *head;
     // 前进方向
     Direction dir;
 } Snake;
@@ -87,19 +86,6 @@ int listLength(Node *head)
         current = current->next;
     }
     return length;
-}
-
-bool isAlive(Snake *snake, Scene *scene)
-{
-    if (snake->head->x <= 0 || snake->head->x >= scene->w - 1 || snake->head->y <= 0 || snake->head->y >= scene->h - 1)
-        return false;
-
-    for (Node *node = snake->tail; node != snake->head; node = node->next)
-    {
-        if (node->x == snake->head->x && node->y == snake->head->y)
-            return false;
-    }
-    return true;
 }
 
 void initWall(Object *wall)
@@ -168,7 +154,7 @@ void addFoodToScene(Scene *scene, Food *food)
     }
 }
 
-SHORT eatFood(Food *food, Node *target)
+SHORT eatFood(Food *food, SHORT x, SHORT y)
 {
     if (food->first == NULL)
         return -1;
@@ -176,7 +162,7 @@ SHORT eatFood(Food *food, Node *target)
     Node *current = food->first;
     Node *prev = NULL;
 
-    while (current != NULL && !(current->x == target->x && current->y == target->y))
+    while (current != NULL && !(current->x == x && current->y == y))
     {
         prev = current;
         current = current->next;
@@ -197,7 +183,6 @@ SHORT eatFood(Food *food, Node *target)
     SHORT data = current->data;
     free(current);
 
-    score++;
     return data;
 }
 
@@ -220,45 +205,75 @@ Snake *newSnake(SHORT x, SHORT y)
     node->x = x;
     node->y = y;
     node->next = NULL;
-    snake->head = node;
     snake->tail = node;
     snake->dir = RIGHT;
     return snake;
 }
 
-void updateSnake(Snake *snake, Food *food, Scene *scene)
+bool updateSnake(Snake *snake, Food *food, Scene *scene)
 {
-    Node *newNode = (Node *)malloc(sizeof(Node));
-    newNode->x = snake->head->x;
-    newNode->y = snake->head->y;
-    newNode->next = NULL;
+    bool alive = true;
+
+    // 找到脖子节点
+    Node *neckNode = snake->tail;
+    while (neckNode->next != NULL && neckNode->next->next != NULL)
+    {
+        neckNode = neckNode->next;
+    }
+    // 找到头节点，考虑只有一个节点的情况
+    Node *headNode = neckNode->next == NULL ? neckNode : neckNode->next;
+
+    SHORT x = headNode->x;
+    SHORT y = headNode->y;
     if (snake->dir == UP)
-        newNode->y--;
+        y--;
     else if (snake->dir == DOWN)
-        newNode->y++;
+        y++;
     else if (snake->dir == LEFT)
-        newNode->x--;
+        x--;
     else if (snake->dir == RIGHT)
-        newNode->x++;
+        x++;
 
     // 吃到食物
-    SHORT eat = eatFood(food, newNode);
-
-    snake->head->next = newNode;
-    snake->head = newNode;
-
+    SHORT eat = eatFood(food, x, y);
     if (eat >= 0)
     {
+        score++;
+        Node *newNode = (Node *)malloc(sizeof(Node));
         newNode->data = eat;
+        // 新节点位置是原头部位置
+        newNode->x = headNode->x;
+        newNode->y = headNode->y;
+        newNode->next = headNode;
+        // 头部位置更新
+        headNode->x = x;
+        headNode->y = y;
+        if (neckNode != headNode)
+            neckNode->next = newNode;
+        else
+            snake->tail = newNode;
     }
     else
     {
-        // 删除尾节点
-        Node *tail = snake->tail;
-        snake->tail = tail->next;
-        free(tail);
-        tail = NULL;
+        // 从尾到头遍历链表，更新蛇的位置
+        Node *node = snake->tail;
+        for (; node->next != NULL; node = node->next)
+        {
+            node->x = node->next->x;
+            node->y = node->next->y;
+            // 判断撞到自己
+            if (alive && node->x == x && node->y == y)
+                alive = false;
+        }
+        // 更新头节点
+        node->x = x;
+        node->y = y;
+
+        // 判断撞墙
+        if (x <= 0 || x >= scene->w - 1 || y <= 0 || y >= scene->h - 1)
+            alive = false;
     }
+    return alive;
 }
 
 void addSnakeToScene(Scene *scene, Snake *snake)
@@ -360,7 +375,7 @@ start:
 
         keyboardControl(snake);
 
-        updateSnake(snake, food, scene);
+        bool alive = updateSnake(snake, food, scene);
         updateFood(food, snake, scene);
 
         addToScene(scene, wall);
@@ -380,7 +395,7 @@ start:
         snprintf(buffer, sizeof(buffer), "%s: %d", "SNAKE", listLength(snake->tail));
         printString(w * 2, 5, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
 
-        if (!isAlive(snake, scene))
+        if (!alive)
             break;
 
         frameEnd(&fr);
