@@ -145,8 +145,8 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
         obj->buffer[i] = (Char *)malloc(obj->w * sizeof(Char));
         for (int j = 0; j < w; j++)
         {
-            // 默认黑色
-            obj->buffer[i][j].color = 0;
+            // 默认背景黑色，前景白色
+            obj->buffer[i][j].color = 0x0F;
         }
     }
     return obj;
