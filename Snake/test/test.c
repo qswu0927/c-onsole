@@ -160,7 +160,7 @@ void testWriteConsoleW()
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleOutputCP(CP_UTF8);
     DWORD written;
-    wchar_t text[] = L"Hello, 世界●◼😄和🐍";
+    wchar_t text[] = L"Hello, 世界●◼😄\n和🐍";
 
     // 使用 WriteConsoleW 替代 WriteConsoleOutputCharacterW
     WriteConsoleW(hConsole, text, wcslen(text), &written, NULL);

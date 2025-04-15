@@ -42,10 +42,10 @@ Scene *newScene(SHORT w, SHORT h)
     Scene *scene = (Scene *)malloc(sizeof(Scene));
     scene->w = w;
     scene->h = h;
-    scene->buffer = (char **)malloc(h * sizeof(char *));
+    scene->buffer = (Char **)malloc(scene->h * sizeof(Char *));
     for (int i = 0; i < h; i++)
     {
-        scene->buffer[i] = (char *)malloc(w * sizeof(char));
+        scene->buffer[i] = (Char *)malloc(scene->w * sizeof(Char));
     }
     return scene;
 }
@@ -62,7 +62,11 @@ void addToScene(Scene *scene, Object *obj)
     }
 }
 
-void renderScene(Scene *scene)
+/**
+ * 使用背景色渲染场景
+ * 因CHAR_INFO不支持大于两字节字符
+ */
+void renderSceneByBg(Scene *scene)
 {
     SHORT wr = 2;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -79,12 +83,42 @@ void renderScene(Scene *scene)
             {
                 int index = wr * (i * scene->w + j) + k;
                 charInfo[index].Char.AsciiChar = ' ';
-                charInfo[index].Attributes = scene->buffer[i][j];
+                charInfo[index].Attributes = scene->buffer[i][j].color;
             }
         }
     }
     WriteConsoleOutput(hConsole, charInfo, bufferSize, bufferCoord, &writeRegion);
     free(charInfo);
+}
+
+/**
+ * 渲染场景
+ * 支持emoji（使用虚拟终端序列，需要控制台支持，例如Windows Terminal）
+ */
+void renderScene(Scene *scene)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD written;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), (COORD){0, 0});
+    for (int i = 0; i < scene->h; i++)
+    {
+        for (int j = 0; j < scene->w; j++)
+        {
+            char colorSeq[32];
+            snprintf(colorSeq, sizeof(colorSeq), "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+                     (scene->buffer[i][j].color & FOREGROUND_RED) ? 255 : 0,
+                     (scene->buffer[i][j].color & FOREGROUND_GREEN) ? 255 : 0,
+                     (scene->buffer[i][j].color & FOREGROUND_BLUE) ? 255 : 0,
+                     (scene->buffer[i][j].color & BACKGROUND_RED) ? 255 : 0,
+                     (scene->buffer[i][j].color & BACKGROUND_GREEN) ? 255 : 0,
+                     (scene->buffer[i][j].color & BACKGROUND_BLUE) ? 255 : 0);
+            WriteConsoleA(hConsole, colorSeq, (DWORD)strlen(colorSeq), &written, NULL);
+            WriteConsoleW(hConsole, scene->buffer[i][j].ch, 2, &written, NULL);
+        }
+        printf("\n");
+    }
+    // 重置颜色
+    WriteConsoleA(hConsole, "\x1b[0m", 4, &written, NULL);
 }
 
 void freeScene(Scene *scene)
@@ -105,10 +139,15 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
     obj->y = y;
     obj->w = w;
     obj->h = h;
-    obj->buffer = (char **)malloc(h * sizeof(char *));
+    obj->buffer = (Char **)malloc(obj->h * sizeof(Char *));
     for (int i = 0; i < h; i++)
     {
-        obj->buffer[i] = (char *)malloc(w * sizeof(char));
+        obj->buffer[i] = (Char *)malloc(obj->w * sizeof(Char));
+        for (int j = 0; j < w; j++)
+        {
+            // 默认黑色
+            obj->buffer[i][j].color = 0;
+        }
     }
     return obj;
 }

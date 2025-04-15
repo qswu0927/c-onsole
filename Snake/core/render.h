@@ -13,15 +13,21 @@ typedef struct
 
 typedef struct
 {
+    wchar_t *ch;
+    WORD color;
+} Char;
+
+typedef struct
+{
     SHORT x, y;
     SHORT w, h;
-    char **buffer;
+    Char **buffer;
 } Object;
 
 typedef struct
 {
     SHORT w, h;
-    char **buffer;
+    Char **buffer;
 } Scene;
 
 FrameRate newFrameRate(SHORT fps);
@@ -29,6 +35,7 @@ void frameStart(FrameRate *fr);
 void frameEnd(FrameRate *fr);
 Scene *newScene(SHORT w, SHORT h);
 void addToScene(Scene *scene, Object *obj);
+void renderSceneByBg(Scene *scene);
 void renderScene(Scene *obj);
 void freeScene(Scene *scene);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
