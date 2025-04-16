@@ -9,6 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 add_executable(${PROJECT_NAME} 
                 core/window.c 
                 core/render.c 
+                core/music.c 
                 test/test.c 
                 main.c)
 

@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <windows.h>
+#include <time.h>
 #include <stdbool.h>
 #include <conio.h>
 #include "core/window.h"
 #include "core/render.h"
+#include "core/music.h"
 
 typedef enum
 {
@@ -27,6 +29,8 @@ typedef struct
     Node *tail;
     // 前进方向
     Direction dir;
+    // 存活
+    bool alive;
 } Snake;
 
 typedef struct
@@ -118,7 +122,7 @@ Food *newFood()
 
 void updateFood(Food *food, Snake *snake, Scene *scene)
 {
-    if (listLength(food->first) > 5)
+    if (listLength(food->first) >= 50)
         return;
     SHORT x = rand() % (scene->w - 2) + 1;
     SHORT y = rand() % (scene->h - 2) + 1;
@@ -206,14 +210,21 @@ Snake *newSnake(SHORT x, SHORT y)
     node->y = y;
     node->next = NULL;
     snake->tail = node;
-    snake->dir = RIGHT;
+    snake->dir = NONE;
+    snake->alive = true;
     return snake;
 }
 
-bool updateSnake(Snake *snake, Food *food, Scene *scene)
+void startSnake(void *context)
 {
-    bool alive = true;
+    Snake *snake = (Snake *)context;
+    snake->dir = RIGHT;
+}
 
+void updateSnake(Snake *snake, Food *food, Scene *scene)
+{
+    if (snake->dir == NONE)
+        return;
     // 找到脖子节点
     Node *neckNode = snake->tail;
     while (neckNode->next != NULL && neckNode->next->next != NULL)
@@ -239,6 +250,8 @@ bool updateSnake(Snake *snake, Food *food, Scene *scene)
     if (eat >= 0)
     {
         score++;
+        // 播放音效
+        Beep(600, 5);
         Node *newNode = (Node *)malloc(sizeof(Node));
         newNode->data = eat;
         // 新节点位置是原头部位置
@@ -262,8 +275,8 @@ bool updateSnake(Snake *snake, Food *food, Scene *scene)
             node->x = node->next->x;
             node->y = node->next->y;
             // 判断撞到自己
-            if (alive && node->x == x && node->y == y)
-                alive = false;
+            if (snake->alive && node->x == x && node->y == y)
+                snake->alive = false;
         }
         // 更新头节点
         node->x = x;
@@ -271,17 +284,16 @@ bool updateSnake(Snake *snake, Food *food, Scene *scene)
 
         // 判断撞墙
         if (x <= 0 || x >= scene->w - 1 || y <= 0 || y >= scene->h - 1)
-            alive = false;
+            snake->alive = false;
     }
-    return alive;
 }
 
 void addSnakeToScene(Scene *scene, Snake *snake)
 {
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
-        scene->buffer[node->y][node->x].ch = node->next == NULL ? L"🤢" : getFoodCh(node->data);
-        scene->buffer[node->y][node->x].color = node->next == NULL ? (char)(FOREGROUND_GREEN | FOREGROUND_RED) : BACKGROUND_GREEN;
+        scene->buffer[node->y][node->x].ch = node->next == NULL ? (snake->alive ? L"🤢" : L"😂") : getFoodCh(node->data);
+        scene->buffer[node->y][node->x].color = node->next == NULL ? FOREGROUND_GREEN : BACKGROUND_GREEN;
     }
 }
 
@@ -358,24 +370,34 @@ void keyboardControl(Snake *snake)
 int main()
 {
 start:
+    score = 0;
     SHORT w = 20, h = 20;
     HANDLE hConsole = setupConsole(w, h, L"贪吃蛇");
+    // 使用当前时间作为随机数种子
+    srand((unsigned int)time(NULL));
 
     Scene *scene = newScene(w, h);
     Object *wall = newObject(0, 0, w, h);
-    Snake *snake = newSnake(w / 3, h / 2);
+    Snake *snake = newSnake(w / 4, h / 2);
     Food *food = newFood();
+
+    // 播放开始音乐
+    SoundParams soundParams = {.frequencies = (int[]){100, 200, 300, 400, 300, 200, 100}, .durations = (int[]){50, 50, 50, 100, 50, 50, 50}, .count = 7, .pause = 20};
+    // 音乐结束后开始运动
+    soundParams.callback = startSnake;
+    soundParams.callbackContext = snake;
+    playSound(&soundParams);
 
     initWall(wall);
 
-    FrameRate fr = newFrameRate(8);
+    FrameRate fr = newFrameRate(6);
     while (1)
     {
         frameStart(&fr);
 
         keyboardControl(snake);
 
-        bool alive = updateSnake(snake, food, scene);
+        updateSnake(snake, food, scene);
         updateFood(food, snake, scene);
 
         addToScene(scene, wall);
@@ -391,12 +413,15 @@ start:
         printString(w * 2, 2, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
         snprintf(buffer, sizeof(buffer), "%s: %d", "FOOD", listLength(food->first));
         printString(w * 2, 3, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
-        printString(w * 2, 4, FOREGROUND_GREEN | FOREGROUND_BLUE, listToString(food->first));
+        // printString(w * 2, 4, FOREGROUND_GREEN | FOREGROUND_BLUE, listToString(food->first));
         snprintf(buffer, sizeof(buffer), "%s: %d", "SNAKE", listLength(snake->tail));
         printString(w * 2, 5, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
 
-        if (!alive)
+        if (!snake->alive)
+        {
+            Beep(350, 100);
             break;
+        }
 
         frameEnd(&fr);
     }
