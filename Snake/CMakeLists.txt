@@ -5,12 +5,15 @@ project(Snake C)  # 显式声明为 C 项目
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# 开启UNICODE
+# add_definitions(-DUNICODE -D_UNICODE)
+
 # 添加可执行文件
 add_executable(${PROJECT_NAME} 
                 core/window.c 
                 core/render.c 
                 core/music.c 
-                test/test.c 
+                # test/test.c 
                 main.c)
 
 # 其他设置

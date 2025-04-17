@@ -11,6 +11,17 @@ typedef struct
     double elapsedMs;
 } FrameRate;
 
+/**
+ * 渲染模式
+ */
+typedef enum
+{
+    RM_BG,
+    RM_CH,
+    RM_EM,
+    RM_CNT
+} RenderMode;
+
 typedef struct
 {
     wchar_t *ch;
@@ -19,27 +30,27 @@ typedef struct
 
 typedef struct
 {
-    SHORT x, y;
     SHORT w, h;
     Char **buffer;
-} Object;
+    RenderMode mode;
+} Scene;
 
 typedef struct
 {
+    SHORT x, y;
     SHORT w, h;
-    Char **buffer;
-} Scene;
+    CHAR **data;
+} Object;
 
 FrameRate newFrameRate(SHORT fps);
 void frameStart(FrameRate *fr);
 void frameEnd(FrameRate *fr);
 Scene *newScene(SHORT w, SHORT h);
-void addToScene(Scene *scene, Object *obj);
 void renderSceneByBg(Scene *scene);
 void renderScene(Scene *obj);
-void freeScene(Scene *scene);
+void freeScene(Scene **scenePtr);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
-void freeObject(Object *obj);
+void freeObject(Object **objPtr);
 void printString(SHORT x, SHORT y, WORD color, char *str);
 
 #endif

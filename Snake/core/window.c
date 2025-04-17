@@ -1,7 +1,27 @@
 #include <windows.h>
 #include "window.h"
 
-// 2. 禁用鼠标滚轮（拦截 WM_MOUSEWHEEL）
+/**
+ * 启用虚拟终端序列处理
+ */
+int enableVirtualTerminalProcessing()
+{
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE)
+        return -1;
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode))
+        return -1;
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    if (!SetConsoleMode(hOut, dwMode))
+        return -1;
+
+    return 0;
+}
+
+// 禁用鼠标滚轮（拦截 WM_MOUSEWHEEL）
 LRESULT CALLBACK consoleWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     if (uMsg == WM_MOUSEWHEEL || uMsg == WM_MOUSEHWHEEL)
@@ -101,6 +121,8 @@ HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
+    enableVirtualTerminalProcessing();
+
     // 设置控制台输出为 UTF-8 编码
     SetConsoleOutputCP(CP_UTF8);
     // 设置控制台输入为 UTF-8 编码
@@ -118,12 +140,10 @@ HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title)
     disableConsoleTextSelection();
 
     // // 设置缓冲区大小（必须 >= 窗口大小）
-    // COORD bufferSize = {w, h};
-    // SetConsoleScreenBufferSize(hConsole, bufferSize);
+    // SetConsoleScreenBufferSize(hConsole, (COORD){w, h});
 
     // // 设置窗口大小（必须 <= 缓冲区大小）
-    // SMALL_RECT windowRect = {0, 0, w - 1, h - 1};
-    // SetConsoleWindowInfo(hConsole, TRUE, &windowRect);
+    // SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1});
 
     return hConsole; // 返回控制台句柄
 

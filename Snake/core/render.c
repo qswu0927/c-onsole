@@ -42,24 +42,13 @@ Scene *newScene(SHORT w, SHORT h)
     Scene *scene = (Scene *)malloc(sizeof(Scene));
     scene->w = w;
     scene->h = h;
+    scene->mode = RM_BG;
     scene->buffer = (Char **)malloc(scene->h * sizeof(Char *));
     for (int i = 0; i < h; i++)
     {
         scene->buffer[i] = (Char *)malloc(scene->w * sizeof(Char));
     }
     return scene;
-}
-
-void addToScene(Scene *scene, Object *obj)
-{
-    for (int i = 0; i < obj->h; i++)
-    {
-        for (int j = 0; j < obj->w; j++)
-        {
-            if (i + obj->y >= 0 && i + obj->y < scene->h && j + obj->x >= 0 && j + obj->x < scene->w)
-                scene->buffer[i + obj->y][j + obj->x] = obj->buffer[i][j];
-        }
-    }
 }
 
 /**
@@ -97,11 +86,14 @@ void renderSceneByBg(Scene *scene)
  */
 void renderScene(Scene *scene)
 {
+    if (scene->mode == RM_BG)
+        return renderSceneByBg(scene);
+
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD written;
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), (COORD){0, 0});
     for (int i = 0; i < scene->h; i++)
     {
+        SetConsoleCursorPosition(hConsole, (COORD){0, i});
         for (int j = 0; j < scene->w; j++)
         {
             char colorSeq[32];
@@ -115,21 +107,33 @@ void renderScene(Scene *scene)
             WriteConsoleA(hConsole, colorSeq, (DWORD)strlen(colorSeq), &written, NULL);
             WriteConsoleW(hConsole, scene->buffer[i][j].ch, 2, &written, NULL);
         }
-        printf("\n");
     }
     // 重置颜色
     WriteConsoleA(hConsole, "\x1b[0m", 4, &written, NULL);
 }
 
-void freeScene(Scene *scene)
+void freeScene(Scene **scenePtr)
 {
-    for (SHORT i = 0; i < scene->h; i++)
+    if (!scenePtr || !*scenePtr)
+        return;
+
+    Scene *scene = *scenePtr;
+    if (scene->buffer)
     {
-        free(scene->buffer[i]);
+        for (SHORT i = 0; i < scene->h; i++)
+        {
+            if (scene->buffer[i])
+            {
+                // ch默认是指向静态字符串或常量字符串的指针，不应释放；若是动态分配则需要释放
+                // free(scene->buffer[i]->ch);
+                free(scene->buffer[i]);
+            }
+        }
+        free(scene->buffer);
     }
-    free(scene->buffer);
     free(scene);
-    scene = NULL;
+    // 通过双重指针参数置空调用方的指针
+    *scenePtr = NULL;
 }
 
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
@@ -139,28 +143,34 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
     obj->y = y;
     obj->w = w;
     obj->h = h;
-    obj->buffer = (Char **)malloc(obj->h * sizeof(Char *));
+    obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
     for (int i = 0; i < h; i++)
     {
-        obj->buffer[i] = (Char *)malloc(obj->w * sizeof(Char));
-        for (int j = 0; j < w; j++)
-        {
-            // 默认背景黑色，前景白色
-            obj->buffer[i][j].color = 0x0F;
-        }
+        obj->data[i] = (CHAR *)malloc(obj->w * sizeof(CHAR));
     }
     return obj;
 }
 
-void freeObject(Object *obj)
+void freeObject(Object **objPtr)
 {
-    for (SHORT i = 0; i < obj->h; i++)
+    if (!objPtr || !*objPtr)
+        return;
+
+    Object *obj = *objPtr;
+    if (obj->data)
     {
-        free(obj->buffer[i]);
+        for (SHORT i = 0; i < obj->h; i++)
+        {
+            if (obj->data[i])
+            {
+                free(obj->data[i]);
+            }
+        }
+        free(obj->data);
     }
-    free(obj->buffer);
     free(obj);
-    obj = NULL;
+    // 通过双重指针参数置空调用方的指针
+    *objPtr = NULL;
 }
 
 void printString(SHORT x, SHORT y, WORD color, char *str)

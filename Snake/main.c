@@ -7,13 +7,16 @@
 #include "core/render.h"
 #include "core/music.h"
 
+/**
+ * 前进方向
+ */
 typedef enum
 {
-    NONE,
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT
+    DIR_NONE,
+    DIR_UP,
+    DIR_DOWN,
+    DIR_LEFT,
+    DIR_RIGHT
 } Direction;
 
 typedef struct Node
@@ -99,15 +102,35 @@ void initWall(Object *wall)
         for (int j = 0; j < wall->w; j++)
         {
             if (i == 0 || i == wall->h - 1 || j == 0 || j == wall->w - 1)
-                wall->buffer[i][j].ch = L"🚧";
+                wall->data[i][j] = 1;
             else
-                wall->buffer[i][j].ch = L"  ";
+                wall->data[i][j] = 0;
         }
     }
 }
 
-wchar_t *getFoodCh(SHORT data)
+void addWallToScene(Scene *scene, Object *obj)
 {
+    for (int i = 0; i < obj->h; i++)
+    {
+        for (int j = 0; j < obj->w; j++)
+        {
+            if (i + obj->y >= 0 && i + obj->y < scene->h && j + obj->x >= 0 && j + obj->x < scene->w)
+            {
+                scene->buffer[i + obj->y][j + obj->x].ch = obj->data[i][j] == 1 ? (scene->mode == RM_EM ? L"🚧" : scene->mode == RM_CH ? L"墙"
+                                                                                                                                       : L"  ")
+                                                                                : L"  ";
+
+                scene->buffer[i + obj->y][j + obj->x].color = obj->data[i][j] == 1 ? (scene->mode == RM_BG ? BACKGROUND_BLUE : 0x01) : 0;
+            }
+        }
+    }
+}
+
+wchar_t *getFoodCh(Scene *scene, SHORT data)
+{
+    if (scene->mode == RM_BG)
+        return L"  ";
     return data == 0 ? L"🍎" : data == 1 ? L"鸡"
                            : data == 2   ? L"🍇"
                                          : L"🍉";
@@ -154,7 +177,8 @@ void addFoodToScene(Scene *scene, Food *food)
 {
     for (Node *node = food->first; node != NULL; node = node->next)
     {
-        scene->buffer[node->y][node->x].ch = getFoodCh(node->data);
+        scene->buffer[node->y][node->x].ch = getFoodCh(scene, node->data);
+        scene->buffer[node->y][node->x].color = scene->mode == RM_BG ? BACKGROUND_RED : 0;
     }
 }
 
@@ -210,7 +234,7 @@ Snake *newSnake(SHORT x, SHORT y)
     node->y = y;
     node->next = NULL;
     snake->tail = node;
-    snake->dir = NONE;
+    snake->dir = DIR_NONE;
     snake->alive = true;
     return snake;
 }
@@ -218,12 +242,12 @@ Snake *newSnake(SHORT x, SHORT y)
 void startSnake(void *context)
 {
     Snake *snake = (Snake *)context;
-    snake->dir = RIGHT;
+    snake->dir = DIR_RIGHT;
 }
 
 void updateSnake(Snake *snake, Food *food, Scene *scene)
 {
-    if (snake->dir == NONE)
+    if (snake->dir == DIR_NONE)
         return;
     // 找到脖子节点
     Node *neckNode = snake->tail;
@@ -236,13 +260,13 @@ void updateSnake(Snake *snake, Food *food, Scene *scene)
 
     SHORT x = headNode->x;
     SHORT y = headNode->y;
-    if (snake->dir == UP)
+    if (snake->dir == DIR_UP)
         y--;
-    else if (snake->dir == DOWN)
+    else if (snake->dir == DIR_DOWN)
         y++;
-    else if (snake->dir == LEFT)
+    else if (snake->dir == DIR_LEFT)
         x--;
-    else if (snake->dir == RIGHT)
+    else if (snake->dir == DIR_RIGHT)
         x++;
 
     // 吃到食物
@@ -292,8 +316,8 @@ void addSnakeToScene(Scene *scene, Snake *snake)
 {
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
-        scene->buffer[node->y][node->x].ch = node->next == NULL ? (snake->alive ? L"🤢" : L"😂") : getFoodCh(node->data);
-        scene->buffer[node->y][node->x].color = node->next == NULL ? FOREGROUND_GREEN : BACKGROUND_GREEN;
+        scene->buffer[node->y][node->x].ch = node->next == NULL ? (snake->alive ? L"🤢" : L"😂") : getFoodCh(scene, node->data);
+        scene->buffer[node->y][node->x].color = node->next == NULL ? (scene->mode == RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
     }
 }
 
@@ -309,60 +333,52 @@ void freeSnake(Snake *snake)
     snake = NULL;
 }
 
-Direction getInput()
+void keyboardControl(Scene *scene, Snake *snake)
 {
-    if (_kbhit())
+    if (!_kbhit())
+        return;
+    switch (toupper(_getch()))
     {
-        int ch = _getch();
-        if (ch == 0xE0 || ch == 0)
+    case 0xE0:
+    case 0:
+        switch (_getch())
         {
-            switch (_getch())
-            {
-            case 72:
-                return UP;
-            case 80:
-                return DOWN;
-            case 75:
-                return LEFT;
-            case 77:
-                return RIGHT;
-            }
+        case 72:
+            if (snake->dir != DIR_DOWN)
+                snake->dir = DIR_UP;
+            break;
+        case 80:
+            if (snake->dir != DIR_UP)
+                snake->dir = DIR_DOWN;
+            break;
+        case 75:
+            if (snake->dir != DIR_RIGHT)
+                snake->dir = DIR_LEFT;
+            break;
+        case 77:
+            if (snake->dir != DIR_LEFT)
+                snake->dir = DIR_RIGHT;
+            break;
         }
-        else if (ch == 'a' || ch == 'A')
-            return LEFT;
-        else if (ch == 'd' || ch == 'D')
-            return RIGHT;
-        else if (ch == 'w' || ch == 'W')
-            return UP;
-        else if (ch == 's' || ch == 'S')
-            return DOWN;
-    }
-    return NONE;
-}
-
-void keyboardControl(Snake *snake)
-{
-    Direction dir = getInput();
-
-    switch (dir)
-    {
-    case UP:
-        if (snake->dir != DOWN)
-            snake->dir = UP;
         break;
-    case DOWN:
-        if (snake->dir != UP)
-            snake->dir = DOWN;
+    case 'A':
+        if (snake->dir != DIR_RIGHT)
+            snake->dir = DIR_LEFT;
         break;
-    case LEFT:
-        if (snake->dir != RIGHT)
-            snake->dir = LEFT;
+    case 'D':
+        if (snake->dir != DIR_LEFT)
+            snake->dir = DIR_RIGHT;
         break;
-    case RIGHT:
-        if (snake->dir != LEFT)
-            snake->dir = RIGHT;
+    case 'W':
+        if (snake->dir != DIR_DOWN)
+            snake->dir = DIR_UP;
         break;
-    case NONE:
+    case 'S':
+        if (snake->dir != DIR_UP)
+            snake->dir = DIR_DOWN;
+        break;
+    case 'M':
+        scene->mode = (RenderMode)((scene->mode + 1) % RM_CNT);
         break;
     }
 }
@@ -395,12 +411,12 @@ start:
     {
         frameStart(&fr);
 
-        keyboardControl(snake);
+        keyboardControl(scene, snake);
 
         updateSnake(snake, food, scene);
         updateFood(food, snake, scene);
 
-        addToScene(scene, wall);
+        addWallToScene(scene, wall);
         addSnakeToScene(scene, snake);
         addFoodToScene(scene, food);
 
@@ -409,10 +425,12 @@ start:
         char buffer[100];
         snprintf(buffer, sizeof(buffer), "%s: %d", "得分", score);
         printString(w * 2, 0, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
+        snprintf(buffer, sizeof(buffer), "%s: %d", "模式", scene->mode);
+        printString(w * 2, 1, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
         snprintf(buffer, sizeof(buffer), "%s: %.2f", "FPS", 1000.0 / fr.elapsedMs);
         printString(w * 2, 2, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
         snprintf(buffer, sizeof(buffer), "%s: %d", "FOOD", listLength(food->first));
-        printString(w * 2, 3, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
+        printString(w * 2, 3, 0x03, buffer);
         // printString(w * 2, 4, FOREGROUND_GREEN | FOREGROUND_BLUE, listToString(food->first));
         snprintf(buffer, sizeof(buffer), "%s: %d", "SNAKE", listLength(snake->tail));
         printString(w * 2, 5, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
@@ -428,8 +446,8 @@ start:
 
     freeFood(food);
     freeSnake(snake);
-    freeObject(wall);
-    freeScene(scene);
+    freeObject(&wall);
+    freeScene(&scene);
 
     while (1)
     {
@@ -438,6 +456,7 @@ start:
         {
             goto start;
         }
+        Sleep(100);
     }
 
     CloseHandle(hConsole);
