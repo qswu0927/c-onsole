@@ -8,8 +8,18 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # 开启UNICODE
 # add_definitions(-DUNICODE -D_UNICODE)
 
+# 设置编译器选项
+if(MSVC)
+    # MSVC编译器选项
+    add_compile_options(/W4) # 设置警告级别为4，提示未使用的变量等
+else()
+    # GCC编译器选项
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
 # 添加可执行文件
 add_executable(${PROJECT_NAME} 
+                core/util.c 
                 core/window.c 
                 core/render.c 
                 core/music.c 

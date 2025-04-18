@@ -4,18 +4,18 @@
 /**
  * 启用虚拟终端序列处理
  */
-int enableVirtualTerminalProcessing()
+int enableVirtualTerminalProcessing(void)
 {
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hOut == INVALID_HANDLE_VALUE)
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hConsole == INVALID_HANDLE_VALUE)
         return -1;
 
     DWORD dwMode = 0;
-    if (!GetConsoleMode(hOut, &dwMode))
+    if (!GetConsoleMode(hConsole, &dwMode))
         return -1;
 
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(hOut, dwMode))
+    if (!SetConsoleMode(hConsole, dwMode))
         return -1;
 
     return 0;
@@ -31,7 +31,7 @@ LRESULT CALLBACK consoleWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-void disableMouseWheelScroll()
+void disableMouseWheelScroll(void)
 {
     HWND hWnd = GetConsoleWindow();
     if (hWnd)
@@ -41,7 +41,7 @@ void disableMouseWheelScroll()
 }
 
 // 禁用鼠标选取控制台文本内容
-void disableConsoleTextSelection()
+void disableConsoleTextSelection(void)
 {
     HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
     DWORD consoleMode;
@@ -55,7 +55,7 @@ void disableConsoleTextSelection()
     SetConsoleMode(hConsole, consoleMode);
 }
 
-void disableConsoleScrolling()
+void disableConsoleScrolling(void)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -93,7 +93,7 @@ void disableConsoleScrolling()
 }
 
 // 隐藏光标
-void hideConsoleCursor()
+void hideConsoleCursor(void)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO cursorInfo;

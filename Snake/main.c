@@ -3,37 +3,18 @@
 #include <time.h>
 #include <stdbool.h>
 #include <conio.h>
+#include "core/util.h"
 #include "core/window.h"
 #include "core/render.h"
 #include "core/music.h"
-
-/**
- * 前进方向
- */
-typedef enum
-{
-    DIR_NONE,
-    DIR_UP,
-    DIR_DOWN,
-    DIR_LEFT,
-    DIR_RIGHT
-} Direction;
-
-typedef struct Node
-{
-    SHORT x, y;
-    SHORT data;
-    struct Node *next;
-} Node;
 
 typedef struct
 {
     // 为方便操作节点，链表从尾指向头
     Node *tail;
-    // 前进方向
     Direction dir;
-    // 存活
     bool alive;
+    int score;
 } Snake;
 
 typedef struct
@@ -42,75 +23,28 @@ typedef struct
     Node *first;
 } Food;
 
-int score = 0;
-
-char *listToString(Node *head)
+void updateMap(Object *map)
 {
-    if (head == NULL)
+    for (int i = 0; i < map->h; i++)
     {
-        char *str = malloc(1);
-        str[0] = '\0';
-        return str;
-    }
-
-    // 第一次遍历计算所需空间
-    int length = 0;
-    Node *current = head;
-    while (current != NULL)
-    {
-        length += snprintf(NULL, 0, "%d", current->data) + 2; // 数字长度 + "->"
-        current = current->next;
-    }
-
-    // 分配内存
-    char *str = malloc(length);
-    if (str == NULL)
-        return NULL;
-
-    // 第二次遍历构建字符串
-    current = head;
-    int pos = 0;
-    while (current != NULL)
-    {
-        pos += sprintf(str + pos, "%d", current->data);
-        if (current->next != NULL)
+        for (int j = 0; j < map->w; j++)
         {
-            pos += sprintf(str + pos, "->");
-        }
-        current = current->next;
-    }
-
-    return str;
-}
-
-int listLength(Node *head)
-{
-    int length = 0;
-    Node *current = head;
-    while (current != NULL)
-    {
-        length++;
-        current = current->next;
-    }
-    return length;
-}
-
-void initWall(Object *wall)
-{
-    for (int i = 0; i < wall->h; i++)
-    {
-        for (int j = 0; j < wall->w; j++)
-        {
-            if (i == 0 || i == wall->h - 1 || j == 0 || j == wall->w - 1)
-                wall->data[i][j] = 1;
+            if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
+                map->data[i][j] = 1;
             else
-                wall->data[i][j] = 0;
+                map->data[i][j] = 0;
         }
     }
 }
 
-void addWallToScene(Scene *scene, Object *obj)
+void updateMapToScene(Scene *scene, Object *obj)
 {
+    // 深色模式
+    WORD colors[] = {0, 0x80};
+    u_char rgbs[][6] = {{0}, {0, 0, 0, 10, 10, 10}};
+    // 浅色模式
+    // WORD colors[] = {0x70, 0xf0};
+    // u_char rgbs[][6] = {{0, 0, 0, 255, 255, 255}, {0, 0, 0, 245, 245, 245}};
     for (int i = 0; i < obj->h; i++)
     {
         for (int j = 0; j < obj->w; j++)
@@ -121,7 +55,11 @@ void addWallToScene(Scene *scene, Object *obj)
                                                                                                                                        : L"  ")
                                                                                 : L"  ";
 
-                scene->buffer[i + obj->y][j + obj->x].color = obj->data[i][j] == 1 ? (scene->mode == RM_BG ? BACKGROUND_BLUE : 0x01) : 0;
+                scene->buffer[i + obj->y][j + obj->x].color = obj->data[i][j] == 1 ? (scene->mode == RM_BG ? BACKGROUND_BLUE : 0x01) : colors[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(colors)];
+
+                memcpy(scene->buffer[i + obj->y][j + obj->x].rgb,
+                       rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)],
+                       sizeof(scene->buffer[i + obj->y][j + obj->x].rgb));
             }
         }
     }
@@ -136,7 +74,7 @@ wchar_t *getFoodCh(Scene *scene, SHORT data)
                                          : L"🍉";
 }
 
-Food *newFood()
+Food *newFood(void)
 {
     Food *food = (Food *)malloc(sizeof(Food));
     food->first = NULL;
@@ -145,7 +83,7 @@ Food *newFood()
 
 void updateFood(Food *food, Snake *snake, Scene *scene)
 {
-    if (listLength(food->first) >= 50)
+    if (listLen(food->first) >= 50)
         return;
     SHORT x = rand() % (scene->w - 2) + 1;
     SHORT y = rand() % (scene->h - 2) + 1;
@@ -173,7 +111,7 @@ void updateFood(Food *food, Snake *snake, Scene *scene)
     food->first = node;
 }
 
-void addFoodToScene(Scene *scene, Food *food)
+void updateFoodToScene(Scene *scene, Food *food)
 {
     for (Node *node = food->first; node != NULL; node = node->next)
     {
@@ -236,6 +174,7 @@ Snake *newSnake(SHORT x, SHORT y)
     snake->tail = node;
     snake->dir = DIR_NONE;
     snake->alive = true;
+    snake->score = 0;
     return snake;
 }
 
@@ -273,7 +212,7 @@ void updateSnake(Snake *snake, Food *food, Scene *scene)
     SHORT eat = eatFood(food, x, y);
     if (eat >= 0)
     {
-        score++;
+        snake->score++;
         // 播放音效
         Beep(600, 5);
         Node *newNode = (Node *)malloc(sizeof(Node));
@@ -312,12 +251,29 @@ void updateSnake(Snake *snake, Food *food, Scene *scene)
     }
 }
 
-void addSnakeToScene(Scene *scene, Snake *snake)
+void updateSnakeToScene(Scene *scene, Snake *snake)
 {
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = node->next == NULL ? (snake->alive ? L"🤢" : L"😂") : getFoodCh(scene, node->data);
         scene->buffer[node->y][node->x].color = node->next == NULL ? (scene->mode == RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
+
+        if (node->next == NULL)
+        {
+            // 摄像机跟随
+            scene->camera.x = node->x - scene->camera.w / 2;
+            scene->camera.y = node->y - scene->camera.h / 2;
+
+            // 限位
+            if (scene->camera.x < 0)
+                scene->camera.x = 0;
+            if (scene->camera.y < 0)
+                scene->camera.y = 0;
+            if (scene->camera.x + scene->camera.w > scene->w)
+                scene->camera.x = scene->w - scene->camera.w;
+            if (scene->camera.y + scene->camera.h > scene->h)
+                scene->camera.y = scene->h - scene->camera.h;
+        }
     }
 }
 
@@ -383,28 +339,28 @@ void keyboardControl(Scene *scene, Snake *snake)
     }
 }
 
-int main()
+int main(void)
 {
-start:
-    score = 0;
-    SHORT w = 20, h = 20;
+    SHORT w = 44, h = 33;
     HANDLE hConsole = setupConsole(w, h, L"贪吃蛇");
-    // 使用当前时间作为随机数种子
     srand((unsigned int)time(NULL));
 
     Scene *scene = newScene(w, h);
-    Object *wall = newObject(0, 0, w, h);
+    scene->camera.w = 20;
+    scene->camera.h = 20;
+    Object *map = newObject(0, 0, w, h);
+
+BEGIN:
     Snake *snake = newSnake(w / 4, h / 2);
     Food *food = newFood();
 
-    // 播放开始音乐
+    // 开场音乐
     SoundParams soundParams = {.frequencies = (int[]){100, 200, 300, 400, 300, 200, 100}, .durations = (int[]){50, 50, 50, 100, 50, 50, 50}, .count = 7, .pause = 20};
-    // 音乐结束后开始运动
     soundParams.callback = startSnake;
     soundParams.callbackContext = snake;
     playSound(&soundParams);
 
-    initWall(wall);
+    updateMap(map);
 
     FrameRate fr = newFrameRate(6);
     while (1)
@@ -416,24 +372,9 @@ start:
         updateSnake(snake, food, scene);
         updateFood(food, snake, scene);
 
-        addWallToScene(scene, wall);
-        addSnakeToScene(scene, snake);
-        addFoodToScene(scene, food);
-
-        renderScene(scene);
-
-        char buffer[100];
-        snprintf(buffer, sizeof(buffer), "%s: %d", "得分", score);
-        printString(w * 2, 0, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
-        snprintf(buffer, sizeof(buffer), "%s: %d", "模式", scene->mode);
-        printString(w * 2, 1, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
-        snprintf(buffer, sizeof(buffer), "%s: %.2f", "FPS", 1000.0 / fr.elapsedMs);
-        printString(w * 2, 2, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
-        snprintf(buffer, sizeof(buffer), "%s: %d", "FOOD", listLength(food->first));
-        printString(w * 2, 3, 0x03, buffer);
-        // printString(w * 2, 4, FOREGROUND_GREEN | FOREGROUND_BLUE, listToString(food->first));
-        snprintf(buffer, sizeof(buffer), "%s: %d", "SNAKE", listLength(snake->tail));
-        printString(w * 2, 5, FOREGROUND_GREEN | FOREGROUND_BLUE, buffer);
+        updateMapToScene(scene, map);
+        updateSnakeToScene(scene, snake);
+        updateFoodToScene(scene, food);
 
         if (!snake->alive)
         {
@@ -441,26 +382,43 @@ start:
             break;
         }
 
+        renderScene(scene);
+
+        {
+            SHORT row = 0;
+            printStr(scene->camera.w * 2, row++, FOREGROUND_BLUE, "得分: %3d", snake->score);
+            printStr(scene->camera.w * 2, row++, FOREGROUND_BLUE, "输出模式: %d，按M切换", scene->mode);
+            printStr(scene->camera.w * 2, row++, FOREGROUND_BLUE, "FPS: %.2f", 1000.0 / fr.elapsedMs);
+            if (!snake->alive)
+            {
+                printStr(scene->camera.w * 2, row++, FOREGROUND_RED, "按空格重新开始");
+                printStr(scene->camera.w * 2, row++, FOREGROUND_RED, "按Esc退出");
+            }
+        }
+
         frameEnd(&fr);
     }
 
     freeFood(food);
     freeSnake(snake);
-    freeObject(&wall);
-    freeScene(&scene);
 
     while (1)
     {
-        printString(w * 2, h / 2, BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE, "按【空格】键重新开始");
-        if (_kbhit() && _getch() == ' ')
+        if (_kbhit())
         {
-            goto start;
+            int key = _getch();
+            if (key == ' ')
+                goto BEGIN;
+            // Esc退出
+            if (key == 27)
+                break;
         }
         Sleep(100);
     }
 
-    CloseHandle(hConsole);
+    freeObject(&map);
+    freeScene(&scene);
 
-    getchar();
+    CloseHandle(hConsole);
     return 0;
 }

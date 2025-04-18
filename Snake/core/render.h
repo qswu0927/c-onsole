@@ -1,8 +1,6 @@
 #ifndef RENDER_H
 #define RENDER_H
 
-// "●◼◻⊙★○"
-
 typedef struct
 {
     SHORT fps;
@@ -26,13 +24,21 @@ typedef struct
 {
     wchar_t *ch;
     WORD color;
+    u_char rgb[6];
 } Char;
+
+typedef struct
+{
+    SHORT x, y;
+    SHORT w, h;
+} Camera;
 
 typedef struct
 {
     SHORT w, h;
     Char **buffer;
     RenderMode mode;
+    Camera camera;
 } Scene;
 
 typedef struct
@@ -47,10 +53,9 @@ void frameStart(FrameRate *fr);
 void frameEnd(FrameRate *fr);
 Scene *newScene(SHORT w, SHORT h);
 void renderSceneByBg(Scene *scene);
-void renderScene(Scene *obj);
+void renderScene(Scene *scene);
 void freeScene(Scene **scenePtr);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
 void freeObject(Object **objPtr);
-void printString(SHORT x, SHORT y, WORD color, char *str);
-
+void printStr(SHORT x, SHORT y, WORD color, const char *format, ...);
 #endif

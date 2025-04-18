@@ -1,5 +1,5 @@
-#include <windows.h>
 #include <stdio.h>
+#include <windows.h>
 #include "render.h"
 
 FrameRate newFrameRate(SHORT fps)
@@ -59,20 +59,20 @@ void renderSceneByBg(Scene *scene)
 {
     SHORT wr = 2;
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD bufferSize = {wr * scene->w, scene->h};
+    COORD bufferSize = {wr * scene->camera.w, scene->camera.h};
     COORD bufferCoord = {0, 0};
-    SMALL_RECT writeRegion = {0, 0, wr * scene->w - 1, scene->h - 1};
-    CHAR_INFO *charInfo = (CHAR_INFO *)malloc(wr * scene->w * scene->h * sizeof(CHAR_INFO));
+    SMALL_RECT writeRegion = {0, 0, wr * scene->camera.w - 1, scene->camera.h - 1};
+    CHAR_INFO *charInfo = (CHAR_INFO *)malloc(wr * scene->camera.w * scene->camera.h * sizeof(CHAR_INFO));
 
-    for (int i = 0; i < scene->h; i++)
+    for (int i = 0; i < scene->camera.h; i++)
     {
-        for (int j = 0; j < scene->w; j++)
+        for (int j = 0; j < scene->camera.w; j++)
         {
             for (int k = 0; k < wr; k++)
             {
-                int index = wr * (i * scene->w + j) + k;
+                int index = wr * (i * scene->camera.w + j) + k;
                 charInfo[index].Char.AsciiChar = ' ';
-                charInfo[index].Attributes = scene->buffer[i][j].color;
+                charInfo[index].Attributes = scene->buffer[scene->camera.y + i][scene->camera.x + j].color;
             }
         }
     }
@@ -86,26 +86,38 @@ void renderSceneByBg(Scene *scene)
  */
 void renderScene(Scene *scene)
 {
-    if (scene->mode == RM_BG)
-        return renderSceneByBg(scene);
-
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    static char vtSupported = -1;
+    if (vtSupported == -1)
+    {
+        DWORD dwMode = 0;
+        GetConsoleMode(hConsole, &dwMode);
+        vtSupported = (dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0 ? 0 : 1;
+    }
+
+    // 如果不支持虚拟终端序列
+    if (vtSupported == 0)
+    {
+        renderSceneByBg(scene);
+        return;
+    }
+
     DWORD written;
-    for (int i = 0; i < scene->h; i++)
+    for (int i = 0; i < scene->camera.h; i++)
     {
         SetConsoleCursorPosition(hConsole, (COORD){0, i});
-        for (int j = 0; j < scene->w; j++)
+        for (int j = 0; j < scene->camera.w; j++)
         {
-            char colorSeq[32];
-            snprintf(colorSeq, sizeof(colorSeq), "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
-                     (scene->buffer[i][j].color & FOREGROUND_RED) ? 255 : 0,
-                     (scene->buffer[i][j].color & FOREGROUND_GREEN) ? 255 : 0,
-                     (scene->buffer[i][j].color & FOREGROUND_BLUE) ? 255 : 0,
-                     (scene->buffer[i][j].color & BACKGROUND_RED) ? 255 : 0,
-                     (scene->buffer[i][j].color & BACKGROUND_GREEN) ? 255 : 0,
-                     (scene->buffer[i][j].color & BACKGROUND_BLUE) ? 255 : 0);
-            WriteConsoleA(hConsole, colorSeq, (DWORD)strlen(colorSeq), &written, NULL);
-            WriteConsoleW(hConsole, scene->buffer[i][j].ch, 2, &written, NULL);
+            u_char *rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].rgb;
+
+            // 预分配静态缓冲区（避免每次循环分配）
+            static char colorSeq[64];
+
+            // 直接写入（避免snprintf开销）
+            int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+                              rgb[0], rgb[1], rgb[2], rgb[3], rgb[4], rgb[5]);
+            WriteConsoleA(hConsole, colorSeq, len, &written, NULL);
+            WriteConsoleW(hConsole, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
         }
     }
     // 重置颜色
@@ -173,11 +185,43 @@ void freeObject(Object **objPtr)
     *objPtr = NULL;
 }
 
-void printString(SHORT x, SHORT y, WORD color, char *str)
+void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
 {
-    COORD coord = {x, y};
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
-    printf("%s", str);
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+    // 获取标准输出句柄
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    // 设置光标位置
+    SetConsoleCursorPosition(hConsole, (COORD){x, y});
+
+    // 设置文本颜色
+    SetConsoleTextAttribute(hConsole, color);
+
+    // 使用可变参数列表来格式化字符串
+    va_list args;
+    va_start(args, format);
+
+    // 动态分配缓冲区
+    int bufferSize = _vscprintf(format, args) + 1; // _vscprintf计算格式化字符串所需的大小
+    char *buffer = (char *)malloc(bufferSize * sizeof(char));
+    if (buffer == NULL)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        va_end(args);
+        return;
+    }
+
+    // 格式化字符串到动态分配的缓冲区
+    vsnprintf(buffer, bufferSize, format, args);
+
+    // 输出格式化后的字符串
+    printf("%s", buffer);
+
+    // 释放动态分配的内存
+    free(buffer);
+
+    // 恢复默认文本颜色
+    SetConsoleTextAttribute(hConsole, 7);
+
+    // 结束可变参数列表
+    va_end(args);
 }
