@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <windows.h>
 #include "util.h"
+#include <stdio.h>
 
 int listLen(Node *head)
 {

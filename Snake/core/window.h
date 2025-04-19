@@ -1,5 +1,6 @@
 #ifndef WINDOW_H
 #define WINDOW_H
+#include <windows.h>
 
 void hideConsoleCursor(void);
 BOOL setConsoleFont(HANDLE hConsole, int size, const wchar_t *fontName);

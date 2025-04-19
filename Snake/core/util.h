@@ -1,5 +1,6 @@
 #ifndef UTIL_H
 #define UTIL_H
+#include <windows.h>
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
 

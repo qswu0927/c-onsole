@@ -1,6 +1,5 @@
-#include <stdio.h>
-#include <windows.h>
 #include "render.h"
+#include <stdio.h>
 
 FrameRate newFrameRate(SHORT fps)
 {
@@ -109,7 +108,7 @@ void renderScene(Scene *scene)
         SetConsoleCursorPosition(hConsole, (COORD){0, i});
         for (int j = 0; j < scene->camera.w; j++)
         {
-            RGBColor *rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].rgb;
+            const RGBColor *rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].rgb;
 
             // 预分配静态缓冲区（避免每次循环分配）
             static char colorSeq[64];

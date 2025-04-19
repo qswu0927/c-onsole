@@ -23,8 +23,9 @@ add_executable(${PROJECT_NAME}
                 core/window.c 
                 core/render.c 
                 core/music.c 
-                # test/test.c 
                 map.c
+                food.c
+                snake.c
                 main.c)
 
 # 其他设置

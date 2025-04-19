@@ -1,5 +1,5 @@
-#include <windows.h>
 #include "music.h"
+#include <windows.h>
 
 DWORD WINAPI play8BitSound(LPVOID lpParam)
 {

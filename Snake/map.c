@@ -1,7 +1,6 @@
+#include "map.h"
 #include <windows.h>
 #include "core/util.h"
-#include "core/render.h"
-#include "map.h"
 
 void updateMap(Object *map)
 {
