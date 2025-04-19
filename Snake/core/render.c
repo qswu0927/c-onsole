@@ -43,6 +43,7 @@ Scene *newScene(SHORT w, SHORT h)
     scene->w = w;
     scene->h = h;
     scene->mode = RM_BG;
+    scene->camera = (Camera){0, 0, w, h};
     scene->buffer = (Char **)malloc(scene->h * sizeof(Char *));
     for (int i = 0; i < h; i++)
     {
@@ -108,14 +109,14 @@ void renderScene(Scene *scene)
         SetConsoleCursorPosition(hConsole, (COORD){0, i});
         for (int j = 0; j < scene->camera.w; j++)
         {
-            u_char *rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].rgb;
+            RGBColor *rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].rgb;
 
             // 预分配静态缓冲区（避免每次循环分配）
             static char colorSeq[64];
 
             // 直接写入（避免snprintf开销）
             int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
-                              rgb[0], rgb[1], rgb[2], rgb[3], rgb[4], rgb[5]);
+                              rgb->r, rgb->g, rgb->b, rgb->br, rgb->bg, rgb->bb);
             WriteConsoleA(hConsole, colorSeq, len, &written, NULL);
             WriteConsoleW(hConsole, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
         }

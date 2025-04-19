@@ -22,9 +22,14 @@ typedef enum
 
 typedef struct
 {
+    u_char r, g, b, br, bg, bb;
+} RGBColor;
+
+typedef struct
+{
     wchar_t *ch;
     WORD color;
-    u_char rgb[6];
+    const RGBColor *rgb;
 } Char;
 
 typedef struct

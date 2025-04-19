@@ -7,6 +7,7 @@
 #include "core/window.h"
 #include "core/render.h"
 #include "core/music.h"
+#include "map.h"
 
 typedef struct
 {
@@ -22,48 +23,6 @@ typedef struct
     // 支持同时存在多个食物，通过链表连接
     Node *first;
 } Food;
-
-void updateMap(Object *map)
-{
-    for (int i = 0; i < map->h; i++)
-    {
-        for (int j = 0; j < map->w; j++)
-        {
-            if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
-                map->data[i][j] = 1;
-            else
-                map->data[i][j] = 0;
-        }
-    }
-}
-
-void updateMapToScene(Scene *scene, Object *obj)
-{
-    // 深色模式
-    WORD colors[] = {0, 0x80};
-    u_char rgbs[][6] = {{0}, {0, 0, 0, 10, 10, 10}};
-    // 浅色模式
-    // WORD colors[] = {0x70, 0xf0};
-    // u_char rgbs[][6] = {{0, 0, 0, 255, 255, 255}, {0, 0, 0, 245, 245, 245}};
-    for (int i = 0; i < obj->h; i++)
-    {
-        for (int j = 0; j < obj->w; j++)
-        {
-            if (i + obj->y >= 0 && i + obj->y < scene->h && j + obj->x >= 0 && j + obj->x < scene->w)
-            {
-                scene->buffer[i + obj->y][j + obj->x].ch = obj->data[i][j] == 1 ? (scene->mode == RM_EM ? L"🚧" : scene->mode == RM_CH ? L"墙"
-                                                                                                                                       : L"  ")
-                                                                                : L"  ";
-
-                scene->buffer[i + obj->y][j + obj->x].color = obj->data[i][j] == 1 ? (scene->mode == RM_BG ? BACKGROUND_BLUE : 0x01) : colors[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(colors)];
-
-                memcpy(scene->buffer[i + obj->y][j + obj->x].rgb,
-                       rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)],
-                       sizeof(scene->buffer[i + obj->y][j + obj->x].rgb));
-            }
-        }
-    }
-}
 
 wchar_t *getFoodCh(Scene *scene, SHORT data)
 {
