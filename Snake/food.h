@@ -16,6 +16,6 @@ Food *newFood(void);
 void updateFood(Food *food, struct Snake *snake, Scene *scene);
 void updateFoodToScene(Scene *scene, Food *food);
 SHORT eatFood(Food *food, SHORT x, SHORT y);
-void freeFood(Food *food);
+void freeFood(Food **foodPtr);
 
 #endif

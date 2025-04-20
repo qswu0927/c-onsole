@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <conio.h>
 #include "core/util.h"
-#include "core/window.h"
+#include "core/console.h"
 #include "core/render.h"
 #include "core/music.h"
 #include "map.h"
@@ -64,7 +64,7 @@ void keyboardControl(Scene *scene, Snake *snake)
 int main(void)
 {
     SHORT w = 44, h = 33;
-    HANDLE hConsole = setupConsole(w, h, L"贪吃蛇");
+    HANDLE hConsole = setupConsole(60, 20, L"贪吃蛇");
     srand((unsigned int)time(NULL));
 
     Scene *scene = newScene(w, h);
@@ -121,8 +121,8 @@ BEGIN:
         frameEnd(&fr);
     }
 
-    freeFood(food);
-    freeSnake(snake);
+    freeFood(&food);
+    freeSnake(&snake);
 
     while (1)
     {

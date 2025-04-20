@@ -1,6 +1,7 @@
 #include "map.h"
 #include <windows.h>
 #include "core/util.h"
+#include "core/console.h"
 
 void updateMap(Object *map)
 {
@@ -26,7 +27,7 @@ wchar_t *getMapCh(RenderMode mode, CHAR data)
         return L"墙";
     return L"🚧";
 }
-WORD getMapColor(Scene *scene, CHAR data, SHORT i, SHORT j)
+WORD getMapAttr(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
     // 深色模式
     WORD colors[] = {0, 0x80};
@@ -39,26 +40,20 @@ WORD getMapColor(Scene *scene, CHAR data, SHORT i, SHORT j)
     return 0x01;
 }
 
-const RGBColor *getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
+RGBColor getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
     // 深色模式
-    static const RGBColor rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
+    RGBColor rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
     // 浅色模式
-    // static const RGBColor rgbs[] = {{0, 0, 0, 255, 255, 255}, {0, 0, 0, 245, 245, 245}};
+    //  RGBColor rgbs[] = {{0, 0, 0, 255, 255, 255}, {0, 0, 0, 245, 245, 245}};
 
     if (data == 0)
-    {
-        return &rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];
-    }
+        return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];
 
     if (scene->mode == RM_BG)
-    {
-        static const RGBColor rgb = {0, 0, 0, 0, 0, 255};
-        return &rgb;
-    }
+        return (RGBColor){0, 0, 0, 0, 0, 255};
 
-    static const RGBColor rgb = {0, 0, 255, 0, 0, 0};
-    return &rgb;
+    return (RGBColor){0, 0, 255, 0, 0, 0};
 }
 
 void updateMapToScene(Scene *scene, Object *obj)
@@ -69,9 +64,14 @@ void updateMapToScene(Scene *scene, Object *obj)
         {
             scene->buffer[i + obj->y][j + obj->x].ch = getMapCh(scene->mode, obj->data[i][j]);
 
-            scene->buffer[i + obj->y][j + obj->x].color = getMapColor(scene, obj->data[i][j], i, j);
-
-            scene->buffer[i + obj->y][j + obj->x].rgb = getMapRgb(scene, obj->data[i][j], i, j);
+            if (vtSupported)
+            {
+                scene->buffer[i + obj->y][j + obj->x].color.rgb = getMapRgb(scene, obj->data[i][j], i, j);
+            }
+            else
+            {
+                scene->buffer[i + obj->y][j + obj->x].color.attr = getMapAttr(scene, obj->data[i][j], i, j);
+            }
         }
     }
 }

@@ -29,8 +29,11 @@ typedef struct
 typedef struct
 {
     wchar_t *ch;
-    WORD color;
-    const RGBColor *rgb;
+    union
+    {
+        WORD attr;
+        RGBColor rgb;
+    } color;
 } Char;
 
 typedef struct

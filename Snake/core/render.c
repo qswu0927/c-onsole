@@ -1,5 +1,6 @@
 #include "render.h"
 #include <stdio.h>
+#include "console.h"
 
 FrameRate newFrameRate(SHORT fps)
 {
@@ -72,7 +73,7 @@ void renderSceneByBg(Scene *scene)
             {
                 int index = wr * (i * scene->camera.w + j) + k;
                 charInfo[index].Char.AsciiChar = ' ';
-                charInfo[index].Attributes = scene->buffer[scene->camera.y + i][scene->camera.x + j].color;
+                charInfo[index].Attributes = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.attr;
             }
         }
     }
@@ -87,16 +88,9 @@ void renderSceneByBg(Scene *scene)
 void renderScene(Scene *scene)
 {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    static char vtSupported = -1;
-    if (vtSupported == -1)
-    {
-        DWORD dwMode = 0;
-        GetConsoleMode(hConsole, &dwMode);
-        vtSupported = (dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0 ? 0 : 1;
-    }
 
     // 如果不支持虚拟终端序列
-    if (vtSupported == 0)
+    if (!vtSupported)
     {
         renderSceneByBg(scene);
         return;
@@ -108,14 +102,14 @@ void renderScene(Scene *scene)
         SetConsoleCursorPosition(hConsole, (COORD){0, i});
         for (int j = 0; j < scene->camera.w; j++)
         {
-            const RGBColor *rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].rgb;
+            RGBColor rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb;
 
             // 预分配静态缓冲区（避免每次循环分配）
             static char colorSeq[64];
 
             // 直接写入（避免snprintf开销）
             int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
-                              rgb->r, rgb->g, rgb->b, rgb->br, rgb->bg, rgb->bb);
+                              rgb.r, rgb.g, rgb.b, rgb.br, rgb.bg, rgb.bb);
             WriteConsoleA(hConsole, colorSeq, len, &written, NULL);
             WriteConsoleW(hConsole, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
         }

@@ -1,5 +1,6 @@
 #include "food.h"
 #include <windows.h>
+#include "core/console.h"
 #include "snake.h"
 
 wchar_t *getFoodCh(Scene *scene, SHORT data)
@@ -54,7 +55,14 @@ void updateFoodToScene(Scene *scene, Food *food)
     for (Node *node = food->first; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getFoodCh(scene, node->data);
-        scene->buffer[node->y][node->x].color = scene->mode == RM_BG ? BACKGROUND_RED : 0;
+        if (vtSupported)
+        {
+            scene->buffer[node->y][node->x].color.rgb = scene->mode == RM_BG ? (RGBColor){0, 0, 0, 255, 0, 0} : (RGBColor){0, 0, 0, 0, 0, 0};
+        }
+        else
+        {
+            scene->buffer[node->y][node->x].color.attr = scene->mode == RM_BG ? BACKGROUND_RED : 0;
+        }
     }
 }
 
@@ -90,8 +98,11 @@ SHORT eatFood(Food *food, SHORT x, SHORT y)
     return data;
 }
 
-void freeFood(Food *food)
+void freeFood(Food **foodPtr)
 {
+    if (!foodPtr || !*foodPtr)
+        return;
+    Food *food = *foodPtr;
     while (food->first != NULL)
     {
         Node *current = food->first;
@@ -99,5 +110,5 @@ void freeFood(Food *food)
         free(current);
     }
     free(food);
-    food = NULL;
+    *foodPtr = NULL;
 }

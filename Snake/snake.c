@@ -1,5 +1,6 @@
 #include "snake.h"
 #include <stdbool.h>
+#include "core/console.h"
 #include "food.h"
 
 Snake *newSnake(SHORT x, SHORT y)
@@ -94,7 +95,15 @@ void updateSnakeToScene(Scene *scene, Snake *snake)
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = node->next == NULL ? (snake->alive ? L"🤢" : L"😂") : getFoodCh(scene, node->data);
-        scene->buffer[node->y][node->x].color = node->next == NULL ? (scene->mode == RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
+
+        if (vtSupported)
+        {
+            scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (RGBColor){0, 0, 0, 255, 255, 0} : (RGBColor){0, 0, 0, 0, 255, 0};
+        }
+        else
+        {
+            scene->buffer[node->y][node->x].color.attr = node->next == NULL ? (scene->mode == RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
+        }
 
         if (node->next == NULL)
         {
@@ -115,8 +124,11 @@ void updateSnakeToScene(Scene *scene, Snake *snake)
     }
 }
 
-void freeSnake(Snake *snake)
+void freeSnake(Snake **snakePtr)
 {
+    if (snakePtr == NULL || *snakePtr == NULL)
+        return;
+    Snake *snake = *snakePtr;
     while (snake->tail != NULL)
     {
         Node *current = snake->tail;
@@ -124,5 +136,5 @@ void freeSnake(Snake *snake)
         free(current);
     }
     free(snake);
-    snake = NULL;
+    *snakePtr = NULL;
 }

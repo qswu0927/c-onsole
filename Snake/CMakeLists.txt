@@ -20,7 +20,7 @@ endif()
 # 添加可执行文件
 add_executable(${PROJECT_NAME} 
                 core/util.c 
-                core/window.c 
+                core/console.c 
                 core/render.c 
                 core/music.c 
                 map.c

@@ -20,6 +20,6 @@ Snake *newSnake(SHORT x, SHORT y);
 void startSnake(void *context);
 void updateSnake(Snake *snake, struct Food *food, Scene *scene);
 void updateSnakeToScene(Scene *scene, Snake *snake);
-void freeSnake(Snake *snake);
+void freeSnake(Snake **snakePtr);
 
 #endif
