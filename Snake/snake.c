@@ -90,15 +90,27 @@ void updateSnake(Snake *snake, Food *food, Scene *scene)
     }
 }
 
+wchar_t *getHeadCh(Scene *scene)
+{
+    if (scene->mode == RM_BG)
+        return L"  ";
+    if (scene->mode == RM_CH)
+        return L"  ";
+    return L"🤢";
+}
+
 void updateSnakeToScene(Scene *scene, Snake *snake)
 {
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
-        scene->buffer[node->y][node->x].ch = node->next == NULL ? (snake->alive ? L"🤢" : L"😂") : getFoodCh(scene, node->data);
+        scene->buffer[node->y][node->x].ch = node->next == NULL ? getHeadCh(scene) : getFoodCh(scene, node->data);
 
         if (vtSupported)
         {
-            scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (RGBColor){0, 0, 0, 255, 255, 0} : (RGBColor){0, 0, 0, 0, 255, 0};
+            RGBColor color = getFoodRgb(scene, node->data);
+            // 蛇身绿色背景
+            color.bg |= 0xaa;
+            scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode == RM_EM ? (RGBColor){0} : (RGBColor){0, 0, 0, 255, 255, 0}) : color;
         }
         else
         {

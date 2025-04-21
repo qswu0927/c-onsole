@@ -42,10 +42,7 @@ WORD getMapAttr(Scene *scene, CHAR data, SHORT i, SHORT j)
 
 RGBColor getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
-    // 深色模式
     RGBColor rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
-    // 浅色模式
-    //  RGBColor rgbs[] = {{0, 0, 0, 255, 255, 255}, {0, 0, 0, 245, 245, 245}};
 
     if (data == 0)
         return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];

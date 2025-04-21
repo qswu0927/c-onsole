@@ -1,5 +1,6 @@
 #include "render.h"
 #include <stdio.h>
+#include <conio.h>
 #include "console.h"
 
 FrameRate newFrameRate(SHORT fps)
@@ -218,4 +219,21 @@ void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
 
     // 结束可变参数列表
     va_end(args);
+}
+
+int getKb(void)
+{
+    if (!_kbhit())
+        return -1;
+
+    int ch = _getch();
+    if (ch == 0xE0 || ch == 0)
+    {
+        // 是扩展键（如方向键），读取第二个字节
+        int ext = _getch();
+        // 返回组合值（如 0xE04D）
+        return (ch << 8) | ext;
+    }
+    // 普通键，转大写
+    return toupper(ch);
 }
