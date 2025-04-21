@@ -6,6 +6,8 @@
 FrameRate newFrameRate(SHORT fps)
 {
     FrameRate fr = {.fps = fps};
+    // 初始化，避免首次显示无穷
+    fr.elapsedMs = 1000.0 / fr.fps;
     // 获取计时器的频率(每秒计数次数)，这个频率是固定的，在系统启动时确定
     QueryPerformanceFrequency(&fr.frequency);
     return fr;

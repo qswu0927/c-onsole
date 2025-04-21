@@ -13,6 +13,7 @@
     "xutility": "c",
     "stdbool.h": "c",
     "util.h": "c",
-    "food.h": "c"
+    "food.h": "c",
+    "time.h": "c"
   }
 }

@@ -1,5 +1,6 @@
 #ifndef UTIL_H
 #define UTIL_H
+#include <stdio.h>
 #include <windows.h>
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -28,5 +29,6 @@ typedef struct Node
 
 int listLen(Node *head);
 char *listToStr(Node *head, char *con);
+FILE *safeFopen(const char *filename, const char *mode);
 
 #endif

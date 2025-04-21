@@ -1,5 +1,4 @@
 #include "util.h"
-#include <stdio.h>
 
 int listLen(Node *head)
 {
@@ -50,4 +49,16 @@ char *listToStr(Node *head, char *con)
     }
 
     return str;
+}
+
+FILE *safeFopen(const char *filename, const char *mode)
+{
+    FILE *file = NULL;
+    errno_t err = fopen_s(&file, filename, mode);
+    if (err != 0)
+    {
+        perror("Failed to open file");
+        return NULL;
+    }
+    return file;
 }
