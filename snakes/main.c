@@ -1,9 +1,9 @@
 #include <time.h>
 #include <signal.h>
-#include "core/util.h"
-#include "core/console.h"
-#include "core/render.h"
-#include "core/music.h"
+#include "../core/util.h"
+#include "../core/console.h"
+#include "../core/render.h"
+#include "../core/music.h"
 #include "map.h"
 #include "food.h"
 #include "snake.h"

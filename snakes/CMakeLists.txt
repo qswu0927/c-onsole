@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(Snake C)  # 显式声明为 C 项目
+project(snakes C)  # 显式声明为 C 项目
 
 # 设置 C 标准（可选）
 set(CMAKE_C_STANDARD 11)
@@ -19,10 +19,10 @@ endif()
 
 # 添加可执行文件
 add_executable(${PROJECT_NAME} 
-                core/util.c 
-                core/console.c 
-                core/render.c 
-                core/music.c 
+                ../core/util.c 
+                ../core/console.c 
+                ../core/render.c 
+                ../core/music.c 
                 map.c
                 food.c
                 snake.c

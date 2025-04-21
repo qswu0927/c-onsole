@@ -1,6 +1,6 @@
 #include "snake.h"
 #include <stdbool.h>
-#include "core/console.h"
+#include "../core/console.h"
 #include "food.h"
 
 Snake *newSnake(SHORT x, SHORT y)

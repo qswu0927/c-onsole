@@ -1,7 +1,7 @@
 #include "map.h"
 #include <windows.h>
-#include "core/util.h"
-#include "core/console.h"
+#include "../core/util.h"
+#include "../core/console.h"
 
 void updateMap(Object *map)
 {

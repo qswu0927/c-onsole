@@ -1,6 +1,6 @@
 #include "food.h"
 #include <windows.h>
-#include "core/console.h"
+#include "../core/console.h"
 #include "snake.h"
 
 Food *newFood(void)

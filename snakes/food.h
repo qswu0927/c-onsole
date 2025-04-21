@@ -1,7 +1,7 @@
 #ifndef FOOD_H
 #define FOOD_H
-#include "core/util.h"
-#include "core/render.h"
+#include "../core/util.h"
+#include "../core/render.h"
 
 struct Snake;
 

@@ -2,8 +2,8 @@
 #define SNAKE_H
 #include <windows.h>
 #include <stdbool.h>
-#include "core/util.h"
-#include "core/render.h"
+#include "../core/util.h"
+#include "../core/render.h"
 
 struct Food;
 
