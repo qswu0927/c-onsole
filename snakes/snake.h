@@ -14,11 +14,12 @@ typedef struct Snake
     Direction dir;
     bool alive;
     int score;
+    bool npc;
 } Snake;
 
 Snake *newSnake(SHORT x, SHORT y);
 void startSnake(void *context);
-void updateSnake(Snake *snake, struct Food *food, Scene *scene);
+void updateSnake(Snake **snakes, u_char snakeCount, u_char index, struct Food *food, Object *map);
 void updateSnakeToScene(Scene *scene, Snake *snake);
 void freeSnake(Snake **snakePtr);
 

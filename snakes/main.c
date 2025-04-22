@@ -79,13 +79,24 @@ int main(void)
     Object *map = newObject(0, 0, w, h);
 
 BEGIN:
-    Snake *snake = newSnake(w / 4, h / 2);
+    Snake **snakes;
+    u_char snakeCount = 6;
+    snakes = (Snake **)malloc(sizeof(Snake *) * snakeCount);
+    for (int i = 0; i < snakeCount; i++)
+    {
+        snakes[i] = newSnake(rand() % (w - 2) + 1, rand() % (h - 2) + 1);
+    }
+    // 玩家
+    snakes[0]->tail->x = w / 4;
+    snakes[0]->tail->y = h / 2;
+    snakes[0]->npc = false;
+
     Food *food = newFood();
 
     // 开场音乐
     SoundParams soundParams = {.frequencies = (int[]){100, 200, 300, 400, 300, 200, 100}, .durations = (int[]){50, 50, 50, 100, 50, 50, 50}, .count = 7, .pause = 20};
     soundParams.callback = startSnake;
-    soundParams.callbackContext = snake;
+    soundParams.callbackContext = snakes[0];
     playSound(&soundParams);
 
     updateMap(map);
@@ -107,36 +118,47 @@ BEGIN:
         }
         else if (k == 'A' || k == 0xE04B)
         {
-            if (snake->dir != DIR_RIGHT && !isPaused)
-                snake->dir = DIR_LEFT;
+            if (snakes[0]->dir != DIR_RIGHT && !isPaused)
+                snakes[0]->dir = DIR_LEFT;
         }
         else if (k == 'D' || k == 0xE04D)
         {
-            if (snake->dir != DIR_LEFT && !isPaused)
-                snake->dir = DIR_RIGHT;
+            if (snakes[0]->dir != DIR_LEFT && !isPaused)
+                snakes[0]->dir = DIR_RIGHT;
         }
         else if (k == 'W' || k == 0xE048)
         {
-            if (snake->dir != DIR_DOWN && !isPaused)
-                snake->dir = DIR_UP;
+            if (snakes[0]->dir != DIR_DOWN && !isPaused)
+                snakes[0]->dir = DIR_UP;
         }
         else if (k == 'S' || k == 0xE050)
         {
-            if (snake->dir != DIR_UP && !isPaused)
-                snake->dir = DIR_DOWN;
+            if (snakes[0]->dir != DIR_UP && !isPaused)
+                snakes[0]->dir = DIR_DOWN;
         }
 
         if (!isPaused)
         {
-            updateSnake(snake, food, scene);
-            updateFood(food, snake, scene);
+            for (int i = 0; i < snakeCount; i++)
+            {
+                updateSnake(snakes, snakeCount, i, food, map);
+            }
+            updateFood(food, snakes, snakeCount, scene);
         }
 
         updateMapToScene(scene, map);
-        updateSnakeToScene(scene, snake);
+        for (int i = 0; i < snakeCount; i++)
+        {
+            updateSnakeToScene(scene, snakes[i]);
+        }
         updateFoodToScene(scene, food);
 
-        if (!snake->alive)
+        if (snakes[0]->score > config.maxScore)
+        {
+            config.maxScore = snakes[0]->score;
+        }
+
+        if (!snakes[0]->alive)
         {
             Beep(350, 100);
             break;
@@ -147,25 +169,24 @@ BEGIN:
         {
             SHORT row = 0;
             SHORT col = scene->camera.w * 2 + 1;
-            printStr(col, row++, 0x0A, "得分: %6d", snake->score);
+            printStr(col, row++, 0x0A, "得分: %6d", snakes[0]->score);
             printStr(col, row++, 0x09, "最高分: %4d", config.maxScore);
             printStr(col, row++, 0x80, "输出模式: %d，按M切换", scene->mode);
             printStr(col, row++, 0x08, "方向控制: WASD|方向键");
             printStr(col, row++, 0x08, "暂停|继续|重新开始: 空格键");
             printStr(col, row++, 0x08, "退出: Esc键");
             printStr(col, row++, 0x08, "FPS: %.2f", 1000.0 / fr.elapsedMs);
-
-            if (snake->score > config.maxScore)
-            {
-                config.maxScore = snake->score;
-            }
         }
 
         frameEnd(&fr);
     }
 
     freeFood(&food);
-    freeSnake(&snake);
+    for (int i = 0; i < snakeCount; i++)
+    {
+        freeSnake(&snakes[i]);
+    }
+    free(snakes);
 
     while (!isQuit)
     {

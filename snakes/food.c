@@ -10,18 +10,21 @@ Food *newFood(void)
     return food;
 }
 
-void updateFood(Food *food, Snake *snake, Scene *scene)
+void updateFood(Food *food, Snake **snakes, u_char snakeCount, Scene *scene)
 {
     if (listLen(food->first) >= 50)
         return;
     SHORT x = rand() % (scene->w - 2) + 1;
     SHORT y = rand() % (scene->h - 2) + 1;
     // 食物不能出现在蛇身上
-    for (Node *node = snake->tail; node != NULL; node = node->next)
+    for (SHORT i = 0; i < snakeCount; i++)
     {
-        if (node->x == x && node->y == y)
-            // 下一帧再生成
-            return;
+        for (Node *node = snakes[i]->tail; node != NULL; node = node->next)
+        {
+            if (node->x == x && node->y == y)
+                // 下一帧再生成
+                return;
+        }
     }
 
     // 食物不能出现在食物身上

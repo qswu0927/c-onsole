@@ -10,11 +10,11 @@
  */
 typedef enum
 {
-    DIR_NONE,
     DIR_UP,
-    DIR_DOWN,
     DIR_LEFT,
-    DIR_RIGHT
+    DIR_DOWN,
+    DIR_RIGHT,
+    DIR_NONE
 } Direction;
 
 /**
@@ -30,5 +30,6 @@ typedef struct Node
 int listLen(Node *head);
 char *listToStr(Node *head, char *con);
 FILE *safeFopen(const char *filename, const char *mode);
+void shuffle(int arr[], int n);
 
 #endif

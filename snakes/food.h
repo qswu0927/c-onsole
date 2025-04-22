@@ -14,7 +14,7 @@ typedef struct Food
 wchar_t *getFoodCh(Scene *scene, SHORT data);
 RGBColor getFoodRgb(Scene *scene, SHORT data);
 Food *newFood(void);
-void updateFood(Food *food, struct Snake *snake, Scene *scene);
+void updateFood(Food *food, struct Snake **snakes, u_char snakeCount, Scene *scene);
 void updateFoodToScene(Scene *scene, Food *food);
 SHORT eatFood(Food *food, SHORT x, SHORT y);
 void freeFood(Food **foodPtr);
