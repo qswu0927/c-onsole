@@ -70,7 +70,7 @@ void init(void)
 int main(void)
 {
     init();
-    SHORT w = 20, h = 20;
+    SHORT w = 30, h = 30;
     HANDLE hConsole = setupConsole(70, 20, L"贪吃蛇");
 
     Scene *scene = newScene(w, h);
@@ -83,15 +83,17 @@ BEGIN:
     system("cls");
     isWin = false;
     Snake **snakes;
-    u_char snakeCount = 23;
+    u_char snakeCount = 10;
     snakes = (Snake **)malloc(sizeof(Snake *) * snakeCount);
     for (int i = 0; i < snakeCount; i++)
     {
         snakes[i] = newSnake(rand() % (w - 2) + 1, rand() % (h - 2) + 1);
+        snakes[i]->speed = rand() % 12 + 4;
     }
     // 玩家
     snakes[0]->tail->x = w / 4;
     snakes[0]->tail->y = h / 2;
+    snakes[0]->speed = 6;
     snakes[0]->npc = false;
 
     Food *food = newFood(w * h / 30);
@@ -105,7 +107,7 @@ BEGIN:
 
     updateMap(map);
 
-    FrameRate fr = newFrameRate(6);
+    FrameRate fr = newFrameRate(12);
     while (!isQuit)
     {
         frameStart(&fr);
@@ -164,7 +166,8 @@ BEGIN:
         }
 
         updateMapToScene(scene, map);
-        for (int i = 0; i < snakeCount; i++)
+        // 倒序，最后渲染玩家
+        for (int i = snakeCount - 1; i >= 0; i--)
         {
             updateSnakeToScene(scene, snakes[i]);
         }

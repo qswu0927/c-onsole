@@ -12,6 +12,7 @@ Snake *newSnake(SHORT x, SHORT y)
     node->next = NULL;
     snake->tail = node;
     snake->dir = DIR_NONE;
+    snake->tick = 0;
     snake->alive = true;
     snake->npc = true;
     snake->score = 0;
@@ -101,6 +102,10 @@ void autoDir(Snake **snakes, u_char snakeCount, u_char index, Object *map)
 
 void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Object *map)
 {
+    if (snakes[index]->tick++ < 12 / snakes[index]->speed)
+        return;
+    snakes[index]->tick = 0;
+
     if (!snakes[index]->alive)
         return;
     // if (snakes[index]->npc)
@@ -235,9 +240,11 @@ void updateSnakeToScene(Scene *scene, Snake *snake)
             scene->buffer[node->y][node->x].color.attr = node->next == NULL ? (scene->mode == RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
         }
 
-        if (!snake->npc && node->next == NULL)
+        // 摄像机跟随主玩家
+        // if (!snake->npc && node->next == NULL)
+        // 摄像机跟随存活者
+        if (snake->alive && node->next == NULL)
         {
-            // 摄像机跟随
             scene->camera.x = node->x - scene->camera.w / 2;
             scene->camera.y = node->y - scene->camera.h / 2;
 

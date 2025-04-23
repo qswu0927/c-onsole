@@ -42,7 +42,7 @@ WORD getMapAttr(Scene *scene, CHAR data, SHORT i, SHORT j)
 
 RGBColor getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
-    RGBColor rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
+    RGBColor rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
 
     if (data == 0)
         return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];
@@ -50,7 +50,8 @@ RGBColor getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
     if (scene->mode == RM_BG)
         return (RGBColor){0, 0, 0, 0, 0, 255};
 
-    return (RGBColor){0, 0, 255, 0, 0, 0};
+    // return (RGBColor){0, 0, 255, 0, 0, 0};
+    return (RGBColor){100, 100, 100, 0, 0, 255};
 }
 
 void updateMapToScene(Scene *scene, Object *obj)
