@@ -103,7 +103,7 @@ void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Ob
 {
     if (!snakes[index]->alive)
         return;
-    if (snakes[index]->npc)
+    // if (snakes[index]->npc)
     {
         autoDir(snakes, snakeCount, index, map);
     }
@@ -154,19 +154,19 @@ void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Ob
     }
     else
     {
-        // 从尾到头遍历链表，更新蛇的位置
-        Node *node = snakes[index]->tail;
-        for (; node->next != NULL; node = node->next)
+        // 判断撞墙
+        if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
+            snakes[index]->alive = false;
+
+        // 判断撞到自己
+        for (Node *node = snakes[index]->tail; node->next != NULL; node = node->next)
         {
-            node->x = node->next->x;
-            node->y = node->next->y;
-            // 判断撞到自己
-            if (snakes[index]->alive && node->x == x && node->y == y)
+            if (node->x == x && node->y == y)
+            {
                 snakes[index]->alive = false;
+                break;
+            }
         }
-        // 更新头节点
-        node->x = x;
-        node->y = y;
 
         // 判断撞到其他蛇
         for (int j = 0; j < snakeCount; j++)
@@ -185,9 +185,23 @@ void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Ob
                 break;
         }
 
-        // 判断撞墙
-        if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
-            snakes[index]->alive = false;
+        if (snakes[index]->alive)
+        {
+            // 从尾到头遍历链表，更新蛇的位置
+            Node *node = snakes[index]->tail;
+            for (; node->next != NULL; node = node->next)
+            {
+                node->x = node->next->x;
+                node->y = node->next->y;
+            }
+            // 更新头节点
+            node->x = x;
+            node->y = y;
+        }
+        else
+        {
+            Beep(snakes[index]->npc ? 300 : 350, 100);
+        }
     }
 }
 
@@ -238,6 +252,17 @@ void updateSnakeToScene(Scene *scene, Snake *snake)
                 scene->camera.y = scene->h - scene->camera.h;
         }
     }
+}
+
+u_char getAliveCount(Snake **snakes, u_char snakeCount)
+{
+    u_char count = 0;
+    for (int i = 0; i < snakeCount; i++)
+    {
+        if (snakes[i]->alive)
+            count++;
+    }
+    return count;
 }
 
 void freeSnake(Snake **snakePtr)

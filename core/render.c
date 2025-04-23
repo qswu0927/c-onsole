@@ -213,6 +213,16 @@ void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
     // 输出格式化后的字符串
     printf("%s", buffer);
 
+    // 获取控制台宽度
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    SHORT consoleWidth = csbi.dwSize.X;
+
+    // 计算剩余宽度并填充空白字符
+    int remainingWidth = consoleWidth - (x + strlen(buffer));
+    for (int i = 0; i < remainingWidth; i++)
+        printf(" ");
+
     // 释放动态分配的内存
     free(buffer);
 

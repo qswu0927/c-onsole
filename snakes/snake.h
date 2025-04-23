@@ -21,6 +21,7 @@ Snake *newSnake(SHORT x, SHORT y);
 void startSnake(void *context);
 void updateSnake(Snake **snakes, u_char snakeCount, u_char index, struct Food *food, Object *map);
 void updateSnakeToScene(Scene *scene, Snake *snake);
+u_char getAliveCount(Snake **snakes, u_char snakeCount);
 void freeSnake(Snake **snakePtr);
 
 #endif

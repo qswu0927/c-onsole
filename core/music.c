@@ -6,10 +6,13 @@ DWORD WINAPI play8BitSound(LPVOID lpParam)
     // 从参数中获取音效数据
     SoundParams *params = (SoundParams *)lpParam;
 
-    for (int i = 0; i < params->count; i++)
+    for (int i = 0; i < params->count;)
     {
-        Beep(params->frequencies[i], params->durations[i]);
-        Sleep(params->pause);
+        int f = params->data[i++];
+        int d = params->data[i++];
+        int p = params->data[i++];
+        Beep(f, d);
+        Sleep(p);
     }
 
     // 播放完成后调用回调
@@ -34,6 +37,7 @@ void playSound(SoundParams *params)
 
     if (hThread)
     {
-        CloseHandle(hThread); // 我们不关心线程句柄
+        // 不关心线程句柄
+        CloseHandle(hThread);
     }
 }

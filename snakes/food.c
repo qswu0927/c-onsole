@@ -3,16 +3,17 @@
 #include "../core/console.h"
 #include "snake.h"
 
-Food *newFood(void)
+Food *newFood(SHORT maxLen)
 {
     Food *food = (Food *)malloc(sizeof(Food));
     food->first = NULL;
+    food->maxLen = maxLen;
     return food;
 }
 
 void updateFood(Food *food, Snake **snakes, u_char snakeCount, Scene *scene)
 {
-    if (listLen(food->first) >= 50)
+    if (listLen(food->first) >= food->maxLen)
         return;
     SHORT x = rand() % (scene->w - 2) + 1;
     SHORT y = rand() % (scene->h - 2) + 1;

@@ -16,6 +16,7 @@ typedef struct
 
 bool isPaused = false;
 bool isQuit = false;
+bool isWin = false;
 Config config = {.mode = RM_BG, .maxScore = 0};
 
 void loadConfig(const char *filename, Config *config)
@@ -69,7 +70,7 @@ void init(void)
 int main(void)
 {
     init();
-    SHORT w = 44, h = 33;
+    SHORT w = 20, h = 20;
     HANDLE hConsole = setupConsole(70, 20, L"贪吃蛇");
 
     Scene *scene = newScene(w, h);
@@ -79,8 +80,10 @@ int main(void)
     Object *map = newObject(0, 0, w, h);
 
 BEGIN:
+    system("cls");
+    isWin = false;
     Snake **snakes;
-    u_char snakeCount = 6;
+    u_char snakeCount = 23;
     snakes = (Snake **)malloc(sizeof(Snake *) * snakeCount);
     for (int i = 0; i < snakeCount; i++)
     {
@@ -91,10 +94,11 @@ BEGIN:
     snakes[0]->tail->y = h / 2;
     snakes[0]->npc = false;
 
-    Food *food = newFood();
+    Food *food = newFood(w * h / 30);
 
     // 开场音乐
-    SoundParams soundParams = {.frequencies = (int[]){100, 200, 300, 400, 300, 200, 100}, .durations = (int[]){50, 50, 50, 100, 50, 50, 50}, .count = 7, .pause = 20};
+    int data[] = {100, 50, 20, 200, 50, 20, 300, 50, 20, 400, 100, 20, 300, 50, 20, 200, 50, 20, 100, 50, 20};
+    SoundParams soundParams = {.data = data, .count = sizeof(data) / sizeof(data[0])};
     soundParams.callback = startSnake;
     soundParams.callbackContext = snakes[0];
     playSound(&soundParams);
@@ -110,7 +114,20 @@ BEGIN:
         if (k == 27)
             isQuit = true;
         else if (k == ' ')
-            isPaused = !isPaused;
+        {
+            if (snakes[0]->alive)
+                isPaused = !isPaused;
+            else
+            {
+                freeFood(&food);
+                for (int i = 0; i < snakeCount; i++)
+                {
+                    freeSnake(&snakes[i]);
+                }
+                free(snakes);
+                goto BEGIN;
+            }
+        }
         else if (k == 'M')
         {
             scene->mode = (RenderMode)((scene->mode + 1) % RM_CNT);
@@ -158,22 +175,39 @@ BEGIN:
             config.maxScore = snakes[0]->score;
         }
 
-        if (!snakes[0]->alive)
-        {
-            Beep(350, 100);
-            break;
-        }
-
         renderScene(scene);
+
+        u_char aliveCount = getAliveCount(snakes, snakeCount);
+        if (!isWin && aliveCount == 1 && snakes[0]->alive)
+        {
+            isWin = true;
+            // 胜利音乐
+            int data[] = {523, 200, 50, // C5 (Do)
+                          587, 200, 50, // D5 (Re)
+                          659, 200, 50, // E5 (Mi)
+                          784, 400, 0};
+            SoundParams soundParams = {.data = data, .count = sizeof(data) / sizeof(data[0])};
+            playSound(&soundParams);
+        }
 
         {
             SHORT row = 0;
             SHORT col = scene->camera.w * 2 + 1;
             printStr(col, row++, 0x0A, "得分: %6d", snakes[0]->score);
             printStr(col, row++, 0x09, "最高分: %4d", config.maxScore);
-            printStr(col, row++, 0x80, "输出模式: %d，按M切换", scene->mode);
+            printStr(col, row++, 0x09, "玩家: %d/%d", aliveCount, snakeCount);
+            if (isWin)
+                printStr(col, row++, 0x0E, "胜利😄");
+            else if (!snakes[0]->alive)
+                printStr(col, row++, 0x04, "失败😂");
+            else
+                printStr(col, row++, 0x00, "");
+            printStr(col, row++, 0x03, "输出模式: %d，按M切换", scene->mode);
             printStr(col, row++, 0x08, "方向控制: WASD|方向键");
-            printStr(col, row++, 0x08, "暂停|继续|重新开始: 空格键");
+            if (snakes[0]->alive)
+                printStr(col, row++, 0x08, "暂停|继续: 空格键");
+            else
+                printStr(col, row++, 0x08, "重新开始: 空格键");
             printStr(col, row++, 0x08, "退出: Esc键");
             printStr(col, row++, 0x08, "FPS: %.2f", 1000.0 / fr.elapsedMs);
         }
@@ -187,14 +221,6 @@ BEGIN:
         freeSnake(&snakes[i]);
     }
     free(snakes);
-
-    while (!isQuit)
-    {
-        int k = getKb();
-        if (k == ' ')
-            goto BEGIN;
-        Sleep(100);
-    }
 
     freeObject(&map);
     freeScene(&scene);
