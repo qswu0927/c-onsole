@@ -76,3 +76,17 @@ void shuffle(int arr[], int n)
         arr[j] = temp;
     }
 }
+
+/**
+ * 矩阵顺时针旋转90度
+ */
+void rotate90Clockwise(int rows, int cols, CHAR **mat, CHAR **result)
+{
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < cols; j++)
+        {
+            result[j][rows - 1 - i] = mat[i][j];
+        }
+    }
+}

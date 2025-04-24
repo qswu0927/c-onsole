@@ -162,7 +162,7 @@ BEGIN:
             {
                 updateSnake(snakes, snakeCount, i, food, map);
             }
-            updateFood(food, snakes, snakeCount, scene);
+            updateFood(food, snakes, snakeCount, map);
         }
 
         updateMapToScene(scene, map);

@@ -11,12 +11,12 @@ Food *newFood(SHORT maxLen)
     return food;
 }
 
-void updateFood(Food *food, Snake **snakes, u_char snakeCount, Scene *scene)
+void updateFood(Food *food, Snake **snakes, u_char snakeCount, Object *map)
 {
     if (listLen(food->first) >= food->maxLen)
         return;
-    SHORT x = rand() % (scene->w - 2) + 1;
-    SHORT y = rand() % (scene->h - 2) + 1;
+    SHORT x = rand() % (map->w - 2) + 1;
+    SHORT y = rand() % (map->h - 2) + 1;
     // 食物不能出现在蛇身上
     for (SHORT i = 0; i < snakeCount; i++)
     {

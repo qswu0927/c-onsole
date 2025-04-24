@@ -1,6 +1,7 @@
 #include "render.h"
 #include <stdio.h>
 #include <conio.h>
+#include "util.h"
 #include "console.h"
 
 FrameRate newFrameRate(SHORT fps)
@@ -152,12 +153,38 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
     obj->y = y;
     obj->w = w;
     obj->h = h;
+    obj->vx = 0;
+    obj->vy = 0;
     obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
     for (int i = 0; i < h; i++)
     {
         obj->data[i] = (CHAR *)malloc(obj->w * sizeof(CHAR));
     }
     return obj;
+}
+
+void rotateObject(Object *obj)
+{
+    SHORT w = obj->w;
+    SHORT h = obj->h;
+    CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
+    for (int i = 0; i < w; i++)
+    {
+        rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
+    }
+
+    rotate90Clockwise(h, w, obj->data, rotatedData);
+
+    // 释放原数据
+    for (int i = 0; i < h; i++)
+    {
+        free(obj->data[i]);
+    }
+    free(obj->data);
+
+    obj->data = rotatedData;
+    obj->w = h;
+    obj->h = w;
 }
 
 void freeObject(Object **objPtr)

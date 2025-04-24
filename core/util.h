@@ -31,5 +31,6 @@ int listLen(Node *head);
 char *listToStr(Node *head, char *con);
 FILE *safeFopen(const char *filename, const char *mode);
 void shuffle(int arr[], int n);
+void rotate90Clockwise(int rows, int cols, CHAR **mat, CHAR **result);
 
 #endif

@@ -54,6 +54,7 @@ typedef struct
 {
     SHORT x, y;
     SHORT w, h;
+    SHORT vx, vy;
     CHAR **data;
 } Object;
 
@@ -65,6 +66,7 @@ void renderSceneByBg(Scene *scene);
 void renderScene(Scene *scene);
 void freeScene(Scene **scenePtr);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
+void rotateObject(Object *obj);
 void freeObject(Object **objPtr);
 void printStr(SHORT x, SHORT y, WORD color, const char *format, ...);
 int getKb(void);
