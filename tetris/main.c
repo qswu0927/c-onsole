@@ -74,19 +74,27 @@ int main(void)
     Scene *scene = newScene(w, h);
     Object *map = newObject(0, 0, w, h);
     updateMap(map);
-    Object *block = newBlock();
-    block->x = w / 2 - block->w / 2;
-    // block->y = 2 - block->h;
+    Object *block = NULL;
     FrameRate fr = newFrameRate(12);
     while (!isQuit)
     {
         frameStart(&fr);
+
+        if (!block || block->status == 1)
+        {
+            if (block)
+                freeObject(&block);
+            block = newBlock();
+            block->x = map->w / 2 - block->w / 2;
+            block->y = 0;
+        }
 
         int k = getKb();
         if (k == 27)
             isQuit = true;
         else if (k == ' ')
         {
+            isPaused = !isPaused;
         }
         else if (k == 'M')
         {
@@ -109,7 +117,12 @@ int main(void)
         }
         else if (k == 'S' || k == 0xE050)
         {
-            if (block->y > 0)
+            if (!isCollided(block, map, 0, 1))
+                block->y += 1;
+        }
+        else if (k == 'Q')
+        {
+            if (!isCollided(block, map, 0, -1))
                 block->y -= 1;
         }
 

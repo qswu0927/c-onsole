@@ -55,6 +55,7 @@ typedef struct
     SHORT x, y;
     SHORT w, h;
     SHORT vx, vy;
+    CHAR status;
     CHAR **data;
 } Object;
 

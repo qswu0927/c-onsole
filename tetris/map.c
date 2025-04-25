@@ -1,5 +1,6 @@
 #include "map.h"
 #include "../core/console.h"
+#include "block.h"
 
 void updateMap(Object *map)
 {
@@ -21,7 +22,7 @@ RGBColor getMapRgb(Object *map, SHORT i, SHORT j)
         return (RGBColor){0, 0, 0, 0, 128, 128};
 
     if (map->data[i][j])
-        return (RGBColor){0, 0, 0, 0, 255, 0};
+        return getBlockColor(map->data[i][j]);
 
     RGBColor rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
     return rgbs[(i + j) % 2];

@@ -12,22 +12,35 @@ const int TETROMINOS[TETROMINO_COUNT][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // I
     {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
     // O
-    {{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}},
+    {{0, 0, 0, 0}, {0, 2, 2, 0}, {0, 2, 2, 0}, {0, 0, 0, 0}},
     // T
-    {{0, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}},
+    {{0, 0, 0, 0}, {0, 3, 0, 0}, {3, 3, 3, 0}, {0, 0, 0, 0}},
     // L
-    {{0, 0, 0, 0}, {0, 0, 1, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}},
+    {{0, 0, 0, 0}, {0, 0, 4, 0}, {4, 4, 4, 0}, {0, 0, 0, 0}},
     // J
-    {{0, 0, 0, 0}, {1, 0, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}},
+    {{0, 0, 0, 0}, {5, 0, 0, 0}, {5, 5, 5, 0}, {0, 0, 0, 0}},
     // S
-    {{0, 0, 0, 0}, {0, 1, 1, 0}, {1, 1, 0, 0}, {0, 0, 0, 0}},
+    {{0, 0, 0, 0}, {0, 6, 6, 0}, {6, 6, 0, 0}, {0, 0, 0, 0}},
     // Z
-    {{0, 0, 0, 0}, {1, 1, 0, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}}};
+    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}}};
+
+RGBColor getBlockColor(SHORT index)
+{
+    const RGBColor rgbs[] = {
+        {0},
+        {0, 0, 0, 0, 255, 255},
+        {0, 0, 0, 255, 255, 0},
+        {0, 0, 0, 255, 0, 255},
+        {0, 0, 0, 0, 255, 0},
+        {0, 0, 0, 0, 0, 255},
+        {0, 0, 0, 255, 0, 0},
+        {0, 0, 0, 255, 128, 0}};
+    return rgbs[index];
+}
 
 Object *newBlock(void)
 {
-    int index = rand() % TETROMINO_COUNT;
-    // index = 0;
+    SHORT index = rand() % TETROMINO_COUNT;
     Object *block = newObject(0, 0, BLOCK_WIDTH, BLOCK_HEIGHT);
     for (int i = 0; i < BLOCK_HEIGHT; i++)
     {
@@ -47,6 +60,8 @@ bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
         {
             if (block->data[i][j])
             {
+                if (block->x + j + offsetX < 0 || block->x + j + offsetX >= map->w || block->y + i + offsetY < 0 || block->y + i + offsetY >= map->h)
+                    return true; // 越界
                 if (map->data[block->y + i + offsetY][block->x + j + offsetX])
                     return true;
             }
@@ -63,14 +78,14 @@ COORD canRotate(Object *block, Object *map, CHAR **rotatedData)
         return (COORD){0, 0};
 
     // 墙踢（Wall Kick）：当旋转后碰到墙壁或障碍物时，系统会尝试微调方块位置以允许旋转
-    for (short offset = 1; offset < rotatedBlock->w; offset++)
+    for (short offset = 1; offset <= rotatedBlock->w / 2; offset++)
     {
         if (!isCollided(rotatedBlock, map, -offset, 0))
             return (COORD){-offset, 0};
         if (!isCollided(rotatedBlock, map, offset, 0))
             return (COORD){offset, 0};
     }
-    for (short offset = 1; offset < rotatedBlock->h; offset++)
+    for (short offset = 1; offset <= rotatedBlock->h / 2; offset++)
     {
         if (!isCollided(rotatedBlock, map, 0, -offset))
             return (COORD){0, -offset};
@@ -121,20 +136,25 @@ void updateBlock(Object *block, Object *map)
     if ((currentTime - lastFallTime) > 500)
     {
         lastFallTime = currentTime;
-        if (!isCollided(block, map, 0, 1))
+        if (isCollided(block, map, 0, 1))
+        {
+            // 固定方块
+            for (int i = 0; i < block->h; i++)
+            {
+                for (int j = 0; j < block->w; j++)
+                {
+                    if (block->data[i][j])
+                    {
+                        map->data[block->y + i][block->x + j] = block->data[i][j];
+                    }
+                }
+            }
+            block->status = 1; // 设置状态为已固定
+        }
+        else
+        {
             block->y++;
-    }
-}
-
-RGBColor getBlockRgb(CHAR data)
-{
-    if (data)
-    {
-        return (RGBColor){0, 0, 0, 255, 0, 0};
-    }
-    else
-    {
-        return (RGBColor){0, 0, 0, 29, 29, 29};
+        }
     }
 }
 
@@ -152,7 +172,8 @@ void updateBlockToScene(Scene *scene, Object *block)
 
             if (vtSupported)
             {
-                scene->buffer[i + block->y][j + block->x].color.rgb = getBlockRgb(block->data[i][j]);
+                if (block->data[i][j])
+                    scene->buffer[i + block->y][j + block->x].color.rgb = getBlockColor(block->data[i][j]);
             }
         }
     }

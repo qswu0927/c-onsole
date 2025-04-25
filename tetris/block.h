@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "../core/render.h"
 
+RGBColor getBlockColor(SHORT index);
 Object *newBlock(void);
 bool isCollided(Object *block, Object *map, int offsetX, int offsetY);
 void rotateBlock(Object *block, Object *map);
