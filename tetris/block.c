@@ -2,6 +2,7 @@
 #include <time.h>
 #include "../core/util.h"
 #include "../core/console.h"
+#include "map.h"
 
 #define BLOCK_HEIGHT 4
 #define BLOCK_WIDTH 4
@@ -127,6 +128,7 @@ void rotateBlock(Object *block, Object *map)
     block->h = w;
     block->x += offset.X;
     block->y += offset.Y;
+    Beep(600, 5);
 }
 
 void updateBlock(Object *block, Object *map)
@@ -150,6 +152,20 @@ void updateBlock(Object *block, Object *map)
                 }
             }
             block->status = 1; // 设置状态为已固定
+            HANDLE hThread = CreateThread(
+                NULL,       // 默认安全属性
+                0,          // 默认堆栈大小
+                clearLines, // 线程函数
+                map,        // 传入参数
+                0,          // 默认创建标志
+                NULL        // 不需要线程ID
+            );
+
+            if (hThread)
+            {
+                // 不关心线程句柄
+                CloseHandle(hThread);
+            }
         }
         else
         {
@@ -158,8 +174,31 @@ void updateBlock(Object *block, Object *map)
     }
 }
 
-void updateBlockToScene(Scene *scene, Object *block)
+void updateBlockToScene(Scene *scene, Object *block, Object *map)
 {
+    // 显示预期下落位置投影
+    SHORT currentY = block->y;
+    while (!isCollided(block, map, 0, 1))
+        block->y += 1;
+    for (SHORT i = 0; i < block->h; i++)
+    {
+        for (SHORT j = 0; j < block->w; j++)
+        {
+            // 忽略场景外的部分
+            if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
+                continue;
+
+            scene->buffer[i + block->y][j + block->x].ch = L"  ";
+
+            if (vtSupported)
+            {
+                if (block->data[i][j])
+                    scene->buffer[i + block->y][j + block->x].color.rgb = (RGBColor){0, 0, 0, 40, 40, 40};
+            }
+        }
+    }
+    block->y = currentY;
+
     for (SHORT i = 0; i < block->h; i++)
     {
         for (SHORT j = 0; j < block->w; j++)

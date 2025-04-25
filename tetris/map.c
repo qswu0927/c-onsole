@@ -47,3 +47,80 @@ void updateMapToScene(Scene *scene, Object *map)
         }
     }
 }
+
+DWORD WINAPI clearLines(LPVOID lpParam)
+{
+    Object *map = (Object *)lpParam;
+
+    // 考虑连续消除多行的情况
+    SHORT fullLineBegin = -1;
+    SHORT fullLineEnd = -1;
+    for (int y = map->h - 2; y >= 1; y--)
+    {
+        bool full = true;
+        for (int x = 1; x < map->w - 1; x++)
+        {
+            if (!map->data[y][x])
+            {
+                full = false;
+                break;
+            }
+        }
+
+        if (full)
+        {
+            if (fullLineBegin == -1)
+                fullLineBegin = y;
+            fullLineEnd = y;
+        }
+        else
+        {
+            if (fullLineBegin == -1)
+                continue;
+
+            // 闪烁效果
+            // 保存闪烁点原本数据
+            CHAR **flashData = (CHAR **)malloc((fullLineBegin - fullLineEnd + 1) * sizeof(CHAR *));
+            for (int yf = fullLineBegin; yf >= fullLineEnd; yf--)
+            {
+                flashData[fullLineBegin - yf] = (CHAR *)malloc(map->w * sizeof(CHAR));
+                for (int x = 1; x < map->w - 1; x++)
+                    flashData[fullLineBegin - yf][x] = map->data[yf][x];
+            }
+
+            for (SHORT flashTime = 0; flashTime < 2; flashTime++)
+            {
+                for (int yf = fullLineBegin; yf >= fullLineEnd; yf--)
+                    for (int x = 1; x < map->w - 1; x++)
+                        map->data[yf][x] = 0;
+                Sleep(100);
+                for (int yf = fullLineBegin; yf >= fullLineEnd; yf--)
+                    for (int x = 1; x < map->w - 1; x++)
+                        map->data[yf][x] = flashData[fullLineBegin - yf][x];
+                Sleep(100);
+            }
+
+            // 释放闪烁数据内存
+            for (int yf = fullLineBegin; yf >= fullLineEnd; yf--)
+                free(flashData[fullLineBegin - yf]);
+            free(flashData);
+
+            // 下移所有行
+            for (int ny = fullLineBegin; ny > 1 + (fullLineBegin - fullLineEnd); ny--)
+                for (int x = 1; x < map->w - 1; x++)
+                    map->data[ny][x] = map->data[ny - (fullLineBegin - fullLineEnd + 1)][x];
+
+            // 清空顶部行
+            for (int ny = 1; ny <= fullLineBegin - fullLineEnd + 1; ny++)
+                for (int x = 1; x < map->w - 1; x++)
+                    map->data[ny][x] = 0;
+
+            Beep(700, 10);
+
+            // 重新检查
+            y = fullLineBegin;
+            fullLineBegin = -1;
+        }
+    }
+    return 0;
+}

@@ -120,6 +120,11 @@ int main(void)
             if (!isCollided(block, map, 0, 1))
                 block->y += 1;
         }
+        else if (k == 'F')
+        {
+            while (!isCollided(block, map, 0, 1))
+                block->y += 1;
+        }
         else if (k == 'Q')
         {
             if (!isCollided(block, map, 0, -1))
@@ -132,7 +137,7 @@ int main(void)
         }
 
         updateMapToScene(scene, map);
-        updateBlockToScene(scene, block);
+        updateBlockToScene(scene, block, map);
 
         renderScene(scene);
 

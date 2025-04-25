@@ -4,5 +4,6 @@
 
 void updateMap(Object *map);
 void updateMapToScene(Scene *scene, Object *map);
+DWORD WINAPI clearLines(LPVOID lpParam);
 
 #endif
