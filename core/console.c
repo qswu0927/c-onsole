@@ -1,4 +1,5 @@
 #include "console.h"
+#include <stdio.h>
 
 bool vtSupported = false;
 
@@ -99,14 +100,41 @@ HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title)
     // 设置控制台标题
     SetConsoleTitleW(title);
 
-    // 设置缓冲区大小
-    SetConsoleScreenBufferSize(hConsole, (COORD){w, h});
-
-    // 设置窗口大小（必须 <= 缓冲区大小）
-    SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1});
-
     // 设置控制台字体，其他推荐：|新宋体|黑体|MS Gothic
     setConsoleFont(hConsole, 18, L"黑体");
+
+    // 获取当前窗口大小
+    // CONSOLE_SCREEN_BUFFER_INFO csbi;
+    // GetConsoleScreenBufferInfo(hConsole, &csbi);
+    // SHORT width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    // SHORT height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+
+    // 1. 获取最大可能尺寸
+    COORD maxSize = GetLargestConsoleWindowSize(hConsole);
+
+    // 2. 检查请求的尺寸是否合理
+    if (w < 12 || w > maxSize.X || h < 1 || h > maxSize.Y)
+    {
+        printf("请求的尺寸 %dx%d 超出允许范围\n", w, h);
+        return FALSE;
+    }
+
+    // 3. 先设置缓冲区高度足够大
+    SetConsoleScreenBufferSize(hConsole, (COORD){maxSize.X, 9001});
+
+    // 4. 缩小窗口到目标尺寸
+    if (!SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
+    {
+        printf("无法缩小窗口! 错误: %lu\n按回车键继续", GetLastError());
+        getchar();
+    }
+
+    // 5. 最后设置缓冲区大小
+    if (!SetConsoleScreenBufferSize(hConsole, (COORD){w, h}))
+    {
+        printf("无法设置最终缓冲区! 错误: %lu\n按回车键继续", GetLastError());
+        getchar();
+    }
 
     disableConsoleResize();
     disableConsoleTextSelection();

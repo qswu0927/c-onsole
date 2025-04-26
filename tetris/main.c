@@ -69,24 +69,44 @@ int main(void)
 {
     init();
     SHORT w = 12, h = 22;
-    HANDLE hConsole = setupConsole(w * 2 + 20, h, L"Tetris");
+    HANDLE hConsole = setupConsole(w * 2 + 35, h, L"Tetris");
 
     Scene *scene = newScene(w, h);
     Object *map = newObject(0, 0, w, h);
     updateMap(map);
     Object *block = NULL;
+    Object *nextBlock = newBlock(0, 0);
     FrameRate fr = newFrameRate(12);
+    // 开场音效
+    playSound2(7 * 3, 659, 100, 20,
+               494, 100, 20,
+               523, 100, 20,
+               587, 100, 20,
+               523, 100, 20,
+               494, 100, 20,
+               440, 100, 20);
+    system("cls");
     while (!isQuit)
     {
         frameStart(&fr);
 
-        if (!block || block->status == 1)
+        if (block)
         {
-            if (block)
+            if (block->status == 2)
+            {
+            }
+            else if (block->status == 1)
+            {
                 freeObject(&block);
-            block = newBlock();
+            }
+        }
+
+        if (!block)
+        {
+            block = nextBlock;
             block->x = map->w / 2 - block->w / 2;
-            block->y = 0;
+            block->y = -block->h / 2;
+            nextBlock = newBlock(0, 0);
         }
 
         int k = getKb();
@@ -104,12 +124,18 @@ int main(void)
         else if (k == 'A' || k == 0xE04B)
         {
             if (!isCollided(block, map, -1, 0))
+            {
                 block->x -= 1;
+                playSound2(3, 800, 30, 0);
+            }
         }
         else if (k == 'D' || k == 0xE04D)
         {
             if (!isCollided(block, map, 1, 0))
+            {
                 block->x += 1;
+                playSound2(3, 800, 30, 0);
+            }
         }
         else if (k == 'W' || k == 0xE048)
         {
@@ -118,7 +144,10 @@ int main(void)
         else if (k == 'S' || k == 0xE050)
         {
             if (!isCollided(block, map, 0, 1))
+            {
                 block->y += 1;
+                playSound2(3, 800, 30, 0);
+            }
         }
         else if (k == 'F')
         {
@@ -138,15 +167,22 @@ int main(void)
 
         updateMapToScene(scene, map);
         updateBlockToScene(scene, block, map);
+        updateNextBlockToScene(scene, nextBlock);
+
+        if (score > config.maxScore)
+            config.maxScore = score;
 
         renderScene(scene);
 
         {
             SHORT row = 0;
-            SHORT col = scene->camera.w * 2 + 1;
+            SHORT col = w * 2 + 1;
+            printStr(col, row++, 0x0A, "得分: %6d", score);
             printStr(col, row++, 0x09, "最高分: %4d", config.maxScore);
             printStr(col, row++, 0x03, "输出模式: %d，按M切换", scene->mode);
-            printStr(col, row++, 0x08, "方向控制: WASD|方向键");
+            printStr(col, row++, 0x08, "移动: ASD|方向键");
+            printStr(col, row++, 0x08, "旋转: W|↑键");
+            printStr(col, row++, 0x08, "速降: F键");
             printStr(col, row++, 0x08, "退出: Esc键");
             printStr(col, row++, 0x08, "FPS: %.2f", 1000.0 / fr.elapsedMs);
         }

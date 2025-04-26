@@ -100,7 +100,7 @@ BEGIN:
 
     // 开场音乐
     int data[] = {100, 50, 20, 200, 50, 20, 300, 50, 20, 400, 100, 20, 300, 50, 20, 200, 50, 20, 100, 50, 20};
-    SoundParams soundParams = {.data = data, .count = sizeof(data) / sizeof(data[0])};
+    SoundParams soundParams = {.data = data, .count = ARRAY_LEN(data)};
     soundParams.callback = startSnake;
     soundParams.callbackContext = snakes[0];
     playSound(&soundParams);

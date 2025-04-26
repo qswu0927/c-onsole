@@ -1,6 +1,10 @@
 #include "map.h"
+#include "../core/util.h"
 #include "../core/console.h"
+#include "../core/music.h"
 #include "block.h"
+
+int score = 0;
 
 void updateMap(Object *map)
 {
@@ -78,6 +82,9 @@ DWORD WINAPI clearLines(LPVOID lpParam)
             if (fullLineBegin == -1)
                 continue;
 
+            playSound2(12, 523, 80, 0, 587, 80, 0, 659, 80, 0, 684 + (fullLineBegin - fullLineEnd) * 30, 150, 0);
+            score += (fullLineBegin - fullLineEnd + 1) * (fullLineBegin - fullLineEnd + 1);
+
             // 闪烁效果
             // 保存闪烁点原本数据
             CHAR **flashData = (CHAR **)malloc((fullLineBegin - fullLineEnd + 1) * sizeof(CHAR *));
@@ -114,8 +121,6 @@ DWORD WINAPI clearLines(LPVOID lpParam)
             for (int ny = 1; ny <= fullLineBegin - fullLineEnd + 1; ny++)
                 for (int x = 1; x < map->w - 1; x++)
                     map->data[ny][x] = 0;
-
-            Beep(700, 10);
 
             // 重新检查
             y = fullLineBegin;

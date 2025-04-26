@@ -2,14 +2,14 @@
 #include <time.h>
 #include "../core/util.h"
 #include "../core/console.h"
+#include "../core/music.h"
 #include "map.h"
 
 #define BLOCK_HEIGHT 4
 #define BLOCK_WIDTH 4
-#define TETROMINO_COUNT 7
 
 // 方块形状定义
-const int TETROMINOS[TETROMINO_COUNT][BLOCK_HEIGHT][BLOCK_WIDTH] = {
+const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // I
     {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
     // O
@@ -23,31 +23,34 @@ const int TETROMINOS[TETROMINO_COUNT][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // S
     {{0, 0, 0, 0}, {0, 6, 6, 0}, {6, 6, 0, 0}, {0, 0, 0, 0}},
     // Z
-    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}}};
+    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}},
+    // Z
+    {{0, 0, 0, 0}, {0, 7, 0, 0}, {7, 7, 7, 0}, {0, 7, 0, 0}}};
 
 RGBColor getBlockColor(SHORT index)
 {
     const RGBColor rgbs[] = {
         {0},
-        {0, 0, 0, 0, 255, 255},
-        {0, 0, 0, 255, 255, 0},
-        {0, 0, 0, 255, 0, 255},
-        {0, 0, 0, 0, 255, 0},
-        {0, 0, 0, 0, 0, 255},
-        {0, 0, 0, 255, 0, 0},
-        {0, 0, 0, 255, 128, 0}};
+        {0, 0, 0, 0, 158, 96},     // 常春藤绿
+        {0, 0, 0, 255, 185, 15},   // 向日葵黄
+        {0, 0, 0, 198, 226, 255},  // 月光蓝
+        {0, 0, 0, 210, 105, 30},   // 可可棕
+        {0, 0, 0, 65, 105, 225},   // 皇家蓝
+        {0, 0, 0, 250, 128, 114},  // 鲑鱼红
+        {0, 0, 0, 147, 112, 219}}; // 藤萝紫
     return rgbs[index];
 }
 
-Object *newBlock(void)
+Object *newBlock(SHORT x, SHORT y)
 {
-    SHORT index = rand() % TETROMINO_COUNT;
-    Object *block = newObject(0, 0, BLOCK_WIDTH, BLOCK_HEIGHT);
+    SHORT index = rand() % (sizeof(TETROMINOS) / sizeof(TETROMINOS[0]));
+    Object *block = newObject(x, y, BLOCK_WIDTH, BLOCK_HEIGHT);
+    int rd = rand() % 1000;
     for (int i = 0; i < BLOCK_HEIGHT; i++)
     {
         for (int j = 0; j < BLOCK_WIDTH; j++)
         {
-            block->data[i][j] = TETROMINOS[index][i][j];
+            block->data[i][j] = rd == 0 ? (rand() % 2 ? index + 1 : 0) : TETROMINOS[index][i][j];
         }
     }
     return block;
@@ -62,7 +65,10 @@ bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
             if (block->data[i][j])
             {
                 if (block->x + j + offsetX < 0 || block->x + j + offsetX >= map->w || block->y + i + offsetY < 0 || block->y + i + offsetY >= map->h)
-                    return true; // 越界
+                    continue;
+                // 允许穿过顶部
+                if (block->y + i + offsetY == 0)
+                    continue;
                 if (map->data[block->y + i + offsetY][block->x + j + offsetX])
                     return true;
             }
@@ -128,7 +134,7 @@ void rotateBlock(Object *block, Object *map)
     block->h = w;
     block->x += offset.X;
     block->y += offset.Y;
-    Beep(600, 5);
+    playSound2(6, 600, 30, 0, 800, 30, 0);
 }
 
 void updateBlock(Object *block, Object *map)
@@ -147,24 +153,20 @@ void updateBlock(Object *block, Object *map)
                 {
                     if (block->data[i][j])
                     {
-                        map->data[block->y + i][block->x + j] = block->data[i][j];
+                        // 忽略场景外的部分
+                        if (block->y + i >= 0 && block->y + i < map->h && block->x + j >= 0 && block->x + j < map->w)
+                            map->data[block->y + i][block->x + j] = block->data[i][j];
                     }
                 }
             }
-            block->status = 1; // 设置状态为已固定
-            HANDLE hThread = CreateThread(
-                NULL,       // 默认安全属性
-                0,          // 默认堆栈大小
-                clearLines, // 线程函数
-                map,        // 传入参数
-                0,          // 默认创建标志
-                NULL        // 不需要线程ID
-            );
-
-            if (hThread)
+            playSound2(3, 400, 50, 0);
+            block->status = 1;
+            CreateThread(NULL, 0, clearLines, map, 0, NULL);
+            // 结束游戏
+            if (block->y <= 0)
             {
-                // 不关心线程句柄
-                CloseHandle(hThread);
+                block->status = 2;
+                playSound2(6, 220, 300, 100, 175, 500, 0);
             }
         }
         else
@@ -199,6 +201,27 @@ void updateBlockToScene(Scene *scene, Object *block, Object *map)
     }
     block->y = currentY;
 
+    for (SHORT i = 0; i < block->h; i++)
+    {
+        for (SHORT j = 0; j < block->w; j++)
+        {
+            // 忽略场景外的部分
+            if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
+                continue;
+
+            scene->buffer[i + block->y][j + block->x].ch = L"  ";
+
+            if (vtSupported)
+            {
+                if (block->data[i][j])
+                    scene->buffer[i + block->y][j + block->x].color.rgb = getBlockColor(block->data[i][j]);
+            }
+        }
+    }
+}
+
+void updateNextBlockToScene(Scene *scene, Object *block)
+{
     for (SHORT i = 0; i < block->h; i++)
     {
         for (SHORT j = 0; j < block->w; j++)
