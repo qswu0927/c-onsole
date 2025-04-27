@@ -28,7 +28,7 @@ RGBColor getMapRgb(Object *map, SHORT i, SHORT j)
     if (map->data[i][j])
         return getBlockColor(map->data[i][j]);
 
-    RGBColor rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
+    RGBColor rgbs[] = {{0}, {0, 0, 0, 20, 20, 20}};
     return rgbs[(i + j) % 2];
 }
 
@@ -38,7 +38,7 @@ void updateMapToScene(Scene *scene, Object *map)
     {
         for (SHORT j = 0; j < map->w; j++)
         {
-            scene->buffer[i + map->y][j + map->x].ch = L"  ";
+            scene->buffer[i + map->y][j + map->x].ch = _wcsdup(L"  ");
 
             if (vtSupported)
             {

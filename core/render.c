@@ -49,9 +49,17 @@ Scene *newScene(SHORT w, SHORT h)
     scene->mode = RM_BG;
     scene->camera = (Camera){0, 0, w, h};
     scene->buffer = (Char **)malloc(scene->h * sizeof(Char *));
-    for (int i = 0; i < h; i++)
+    for (int i = 0; i < scene->h; i++)
     {
         scene->buffer[i] = (Char *)malloc(scene->w * sizeof(Char));
+    }
+
+    for (int i = 0; i < scene->h; i++)
+    {
+        for (int j = 0; j < scene->w; j++)
+        {
+            scene->buffer[i][j].ch = NULL;
+        }
     }
     return scene;
 }
@@ -115,11 +123,41 @@ void renderScene(Scene *scene)
             int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
                               rgb.r, rgb.g, rgb.b, rgb.br, rgb.bg, rgb.bb);
             WriteConsoleA(hConsole, colorSeq, len, &written, NULL);
+#if true
+            wchar_t *wstr = scene->buffer[scene->camera.y + i][scene->camera.x + j].ch;
+
+            if (wstr != NULL)
+            {
+                size_t length = wcslen(wstr);
+                if (length > 0)
+                {
+                    WriteConsoleW(hConsole, wstr, (DWORD)length, &written, NULL);
+                }
+            }
+            else
+            {
+                // 处理空指针情况，比如写入空格或其他占位符
+                static const wchar_t space = L' ';
+                WriteConsoleW(hConsole, &space, 1, &written, NULL);
+            }
+#else
             WriteConsoleW(hConsole, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
+#endif
         }
     }
     // 重置颜色
     WriteConsoleA(hConsole, "\x1b[0m", 4, &written, NULL);
+#if true
+    // 重置场景缓冲区
+    for (int i = 0; i < scene->camera.h; i++)
+    {
+        for (int j = 0; j < scene->camera.w; j++)
+        {
+            scene->buffer[scene->camera.y + i][scene->camera.x + j].ch = _wcsdup(L"  ");
+            scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb = (RGBColor){0, 0, 0, 0, 0, 0};
+        }
+    }
+#endif
 }
 
 void freeScene(Scene **scenePtr)
@@ -134,8 +172,7 @@ void freeScene(Scene **scenePtr)
         {
             if (scene->buffer[i])
             {
-                // ch默认是指向静态字符串或常量字符串的指针，不应释放；若是动态分配则需要释放
-                // free(scene->buffer[i]->ch);
+                free(scene->buffer[i]->ch);
                 free(scene->buffer[i]);
             }
         }

@@ -53,6 +53,10 @@ Object *newBlock(SHORT x, SHORT y)
             block->data[i][j] = rd == 0 ? (rand() % 2 ? index + 1 : 0) : TETROMINOS[index][i][j];
         }
     }
+    // 随机旋转
+    for (int i = 0; i < rand() % 4; i++)
+        rotateObject(block);
+
     return block;
 }
 
@@ -190,7 +194,7 @@ void updateBlockToScene(Scene *scene, Object *block, Object *map)
             if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
                 continue;
 
-            scene->buffer[i + block->y][j + block->x].ch = L"  ";
+            scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
 
             if (vtSupported)
             {
@@ -209,7 +213,7 @@ void updateBlockToScene(Scene *scene, Object *block, Object *map)
             if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
                 continue;
 
-            scene->buffer[i + block->y][j + block->x].ch = L"  ";
+            scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
 
             if (vtSupported)
             {
@@ -230,7 +234,7 @@ void updateNextBlockToScene(Scene *scene, Object *block)
             if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
                 continue;
 
-            scene->buffer[i + block->y][j + block->x].ch = L"  ";
+            scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
 
             if (vtSupported)
             {

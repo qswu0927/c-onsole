@@ -28,6 +28,7 @@ typedef struct
 
 typedef struct
 {
+    // 统一动态分配
     wchar_t *ch;
     union
     {
