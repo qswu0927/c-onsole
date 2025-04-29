@@ -27,9 +27,9 @@ const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // Z
     {{0, 0, 0, 0}, {0, 7, 0, 0}, {7, 7, 7, 0}, {0, 7, 0, 0}}};
 
-RGBColor getBlockColor(SHORT index)
+Rgb getBlockColor(SHORT index)
 {
-    const RGBColor rgbs[] = {
+    const Rgb rgbs[] = {
         {0},
         {0, 0, 0, 0, 158, 96},     // 常春藤绿
         {0, 0, 0, 255, 185, 15},   // 向日葵黄
@@ -180,7 +180,7 @@ void updateBlock(Object *block, Object *map)
     }
 }
 
-void updateBlockToScene(Scene *scene, Object *block, Object *map)
+void setSceneBlock(Scene *scene, Object *block, Object *map)
 {
     // 显示预期下落位置投影
     SHORT currentY = block->y;
@@ -199,7 +199,7 @@ void updateBlockToScene(Scene *scene, Object *block, Object *map)
             if (vtSupported)
             {
                 if (block->data[i][j])
-                    scene->buffer[i + block->y][j + block->x].color.rgb = (RGBColor){0, 0, 0, 40, 40, 40};
+                    scene->buffer[i + block->y][j + block->x].color.rgb = (Rgb){0, 0, 0, 50, 50, 50};
             }
         }
     }
@@ -224,7 +224,7 @@ void updateBlockToScene(Scene *scene, Object *block, Object *map)
     }
 }
 
-void updateNextBlockToScene(Scene *scene, Object *block)
+void setSceneNextBlock(Scene *scene, Object *block)
 {
     for (SHORT i = 0; i < block->h; i++)
     {

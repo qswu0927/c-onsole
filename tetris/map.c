@@ -20,19 +20,19 @@ void updateMap(Object *map)
     }
 }
 
-RGBColor getMapRgb(Object *map, SHORT i, SHORT j)
+Rgb getMapRgb(Object *map, SHORT i, SHORT j)
 {
     if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
-        return (RGBColor){0, 0, 0, 0, 128, 128};
+        return (Rgb){0, 0, 0, 0, 128, 128};
 
     if (map->data[i][j])
         return getBlockColor(map->data[i][j]);
 
-    RGBColor rgbs[] = {{0}, {0, 0, 0, 20, 20, 20}};
+    Rgb rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
     return rgbs[(i + j) % 2];
 }
 
-void updateMapToScene(Scene *scene, Object *map)
+void setSceneMap(Scene *scene, Object *map)
 {
     for (SHORT i = 0; i < map->h; i++)
     {

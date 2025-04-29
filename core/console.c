@@ -1,13 +1,15 @@
 #include "console.h"
 #include <stdio.h>
 
+HANDLE hConsole = NULL;
+HWND hWnd = NULL;
 bool vtSupported = false;
 
 bool getVtSupport(void)
 {
 #ifdef _WIN32
     DWORD mode = 0;
-    return GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode) &&
+    return GetConsoleMode(hConsole, &mode) &&
            (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #else
     return true; // 非Windows默认支持
@@ -17,7 +19,6 @@ bool getVtSupport(void)
 // 启用虚拟终端序列处理
 int enableVirtualTerminalProcessing(void)
 {
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hConsole == INVALID_HANDLE_VALUE)
         return -1;
 
@@ -35,7 +36,6 @@ int enableVirtualTerminalProcessing(void)
 // 禁用鼠标选取控制台文本内容
 void disableConsoleTextSelection(void)
 {
-    HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
     DWORD consoleMode;
 
     GetConsoleMode(hConsole, &consoleMode);
@@ -50,7 +50,6 @@ void disableConsoleTextSelection(void)
 // 禁止调整控制台窗口大小
 void disableConsoleResize(void)
 {
-    HWND hWnd = GetConsoleWindow();
     LONG style = GetWindowLong(hWnd, GWL_STYLE);
     // 禁止调整窗口大小
     style &= ~WS_THICKFRAME;
@@ -64,7 +63,6 @@ void disableConsoleResize(void)
 // 隐藏光标
 void hideConsoleCursor(void)
 {
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(hConsole, &cursorInfo);
     cursorInfo.bVisible = FALSE;
@@ -86,9 +84,42 @@ BOOL setConsoleFont(HANDLE hConsole, int size, const wchar_t *fontName)
     return SetCurrentConsoleFontEx(hConsole, FALSE, &fontInfo);
 }
 
-HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title)
+// 置顶控制台窗口
+void setConsoleWindowTopmost(void)
 {
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+}
+
+// 窗口居中
+void setConsoleWindowCenter(void)
+{
+    // 获取屏幕分辨率
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+    // 获取控制台窗口当前大小
+    RECT rectConsole;
+    GetWindowRect(hWnd, &rectConsole);
+    int consoleWidth = rectConsole.right - rectConsole.left;
+    int consoleHeight = rectConsole.bottom - rectConsole.top;
+
+    // 计算居中位置
+    int posX = (screenWidth - consoleWidth) / 2;
+    int posY = (screenHeight - consoleHeight) / 2;
+
+    // 设置窗口位置
+    SetWindowPos(
+        hWnd,
+        NULL,
+        posX, posY,
+        0, 0,
+        SWP_NOSIZE | SWP_NOZORDER);
+}
+
+void setupConsole(SHORT w, SHORT h, wchar_t *title)
+{
+    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    hWnd = GetConsoleWindow();
 
     // 启用虚拟终端序列处理
     enableVirtualTerminalProcessing();
@@ -111,34 +142,43 @@ HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title)
 
     // 1. 获取最大可能尺寸
     COORD maxSize = GetLargestConsoleWindowSize(hConsole);
-
     // 2. 检查请求的尺寸是否合理
     if (w < 12 || w > maxSize.X || h < 1 || h > maxSize.Y)
     {
         printf("请求的尺寸 %dx%d 超出允许范围\n", w, h);
-        return FALSE;
+        getchar();
     }
-
     // 3. 先设置缓冲区高度足够大
-    SetConsoleScreenBufferSize(hConsole, (COORD){maxSize.X, 9001});
-
+    if (!SetConsoleScreenBufferSize(hConsole, (COORD){maxSize.X, maxSize.Y}))
+    {
+        printf("无法设置缓冲区! 错误: %lu\n按回车键继续", GetLastError());
+        getchar();
+    }
     // 4. 缩小窗口到目标尺寸
     if (!SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
     {
         printf("无法缩小窗口! 错误: %lu\n按回车键继续", GetLastError());
         getchar();
     }
-
     // 5. 最后设置缓冲区大小
     if (!SetConsoleScreenBufferSize(hConsole, (COORD){w, h}))
     {
         printf("无法设置最终缓冲区! 错误: %lu\n按回车键继续", GetLastError());
         getchar();
     }
+    // 6. 再次设置窗口大小，解决多一行一列的问题
+    if (!SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
+    {
+        printf("无法设置最终窗口! 错误: %lu\n按回车键继续", GetLastError());
+        getchar();
+    }
 
-    disableConsoleResize();
-    disableConsoleTextSelection();
+// 调试模式下，将窗口置顶
+#ifdef _DEBUG
+    setConsoleWindowTopmost();
+#endif
+    // setConsoleWindowCenter();
     hideConsoleCursor();
-
-    return hConsole;
+    disableConsoleTextSelection();
+    disableConsoleResize();
 }

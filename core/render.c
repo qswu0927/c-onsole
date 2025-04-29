@@ -61,6 +61,18 @@ void orColor(Rgb *dest, Rgb *src)
     dest->bb |= src->bb;
 }
 
+void clearScene(Scene *scene)
+{
+    for (int i = 0; i < scene->h; i++)
+    {
+        for (int j = 0; j < scene->w; j++)
+        {
+            scene->buffer[i][j].ch = _wcsdup(L"  ");
+            scene->buffer[i][j].color.rgb = (Rgb){0};
+        }
+    }
+}
+
 Scene *newScene(SHORT w, SHORT h)
 {
     Scene *scene = (Scene *)malloc(sizeof(Scene));
@@ -73,14 +85,7 @@ Scene *newScene(SHORT w, SHORT h)
     {
         scene->buffer[i] = (Char *)malloc(scene->w * sizeof(Char));
     }
-
-    for (int i = 0; i < scene->h; i++)
-    {
-        for (int j = 0; j < scene->w; j++)
-        {
-            scene->buffer[i][j].ch = NULL;
-        }
-    }
+    clearScene(scene);
     return scene;
 }
 
@@ -91,7 +96,6 @@ Scene *newScene(SHORT w, SHORT h)
 void renderSceneByBg(Scene *scene)
 {
     SHORT wr = 2;
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     COORD bufferSize = {wr * scene->camera.w, scene->camera.h};
     COORD bufferCoord = {0, 0};
     SMALL_RECT writeRegion = {0, 0, wr * scene->camera.w - 1, scene->camera.h - 1};
@@ -119,8 +123,6 @@ void renderSceneByBg(Scene *scene)
  */
 void renderScene(Scene *scene)
 {
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
     // 如果不支持虚拟终端序列
     if (!vtSupported)
     {
@@ -134,7 +136,7 @@ void renderScene(Scene *scene)
         SetConsoleCursorPosition(hConsole, (COORD){0, i});
         for (int j = 0; j < scene->camera.w; j++)
         {
-            RGBColor rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb;
+            Rgb rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb;
 
             // 预分配静态缓冲区（避免每次循环分配）
             static char colorSeq[64];
@@ -144,6 +146,7 @@ void renderScene(Scene *scene)
                               rgb.r, rgb.g, rgb.b, rgb.br, rgb.bg, rgb.bb);
             WriteConsoleA(hConsole, colorSeq, len, &written, NULL);
 #if true
+            // 每个坐标按实际字符数进行处理
             wchar_t *wstr = scene->buffer[scene->camera.y + i][scene->camera.x + j].ch;
 
             if (wstr != NULL)
@@ -161,23 +164,14 @@ void renderScene(Scene *scene)
                 WriteConsoleW(hConsole, &space, 1, &written, NULL);
             }
 #else
+            // 每个坐标统一按两个字符数进行处理
             WriteConsoleW(hConsole, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
 #endif
         }
     }
     // 重置颜色
     WriteConsoleA(hConsole, "\x1b[0m", 4, &written, NULL);
-#if true
-    // 重置场景缓冲区
-    for (int i = 0; i < scene->camera.h; i++)
-    {
-        for (int j = 0; j < scene->camera.w; j++)
-        {
-            scene->buffer[scene->camera.y + i][scene->camera.x + j].ch = _wcsdup(L"  ");
-            scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb = (RGBColor){0, 0, 0, 0, 0, 0};
-        }
-    }
-#endif
+    clearScene(scene);
 }
 
 void freeScene(Scene **scenePtr)
@@ -192,6 +186,7 @@ void freeScene(Scene **scenePtr)
         {
             if (scene->buffer[i])
             {
+                // ch统一动态分配，需要释放
                 free(scene->buffer[i]->ch);
                 free(scene->buffer[i]);
             }
@@ -269,9 +264,6 @@ void freeObject(Object **objPtr)
 
 void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
 {
-    // 获取标准输出句柄
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
     // 设置光标位置
     SetConsoleCursorPosition(hConsole, (COORD){x, y});
 
@@ -283,7 +275,7 @@ void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
     va_start(args, format);
 
     // 动态分配缓冲区
-    int bufferSize = _vscprintf(format, args) + 1; // _vscprintf计算格式化字符串所需的大小
+    int bufferSize = _vscprintf(format, args) + 1;
     char *buffer = (char *)malloc(bufferSize * sizeof(char));
     if (buffer == NULL)
     {
@@ -316,6 +308,74 @@ void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
 
     // 结束可变参数列表
     va_end(args);
+}
+
+void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...)
+{
+    // 使用可变参数列表来格式化字符串
+    va_list args;
+    va_start(args, format);
+
+    // 动态分配缓冲区
+    SHORT bufferSize = _vscprintf(format, args) + 1;
+    char *buffer = (char *)malloc(bufferSize * sizeof(char));
+
+    // 格式化字符串到动态分配的缓冲区
+    vsnprintf(buffer, bufferSize, format, args);
+    va_end(args);
+
+    // 转换UTF-8字符串为宽字符
+    SHORT wcharsNeeded = MultiByteToWideChar(CP_UTF8, 0, buffer, -1, NULL, 0);
+
+    wchar_t *wbuffer = (wchar_t *)malloc(wcharsNeeded * sizeof(wchar_t));
+
+    MultiByteToWideChar(CP_UTF8, 0, buffer, -1, wbuffer, wcharsNeeded);
+
+    free(buffer);
+
+    // 有未配对的半宽字符
+    bool hasHalfCh = false;
+
+    for (SHORT i = 0; wbuffer[i] != L'\0' && x < scene->w;)
+    {
+        // 释放旧字符
+        if (scene->buffer[y][x].ch != NULL)
+            free(scene->buffer[y][x].ch);
+
+        // 当前为半宽字符且不存在未配对的，则该位置分配两个字符
+        if (wbuffer[i] <= 0x7F && !hasHalfCh)
+        {
+            scene->buffer[y][x].ch = (wchar_t *)malloc(3 * sizeof(wchar_t));
+            scene->buffer[y][x].ch[0] = wbuffer[i++];
+            // 分配的第二个字符不是半宽字符，则标记未配对
+            if (wbuffer[i] > 0x7F)
+                hasHalfCh = true;
+            scene->buffer[y][x].ch[1] = wbuffer[i] == L'\0' ? L' ' : wbuffer[i++];
+            scene->buffer[y][x].ch[2] = L'\0';
+        }
+        else
+        {
+            if (wbuffer[i] <= 0x7F)
+                hasHalfCh = false;
+            scene->buffer[y][x].ch = (wchar_t *)malloc(2 * sizeof(wchar_t));
+            scene->buffer[y][x].ch[0] = wbuffer[i++];
+            scene->buffer[y][x].ch[1] = L'\0';
+        }
+
+        orColor(&scene->buffer[y][x].color.rgb, &rgb);
+        x++;
+    }
+
+    if (hasHalfCh)
+    {
+        // 补一个空格对齐
+        scene->buffer[y][x].ch = (wchar_t *)malloc(2 * sizeof(wchar_t));
+        scene->buffer[y][x].ch[0] = L' ';
+        scene->buffer[y][x].ch[1] = L'\0';
+        orColor(&scene->buffer[y][x].color.rgb, &rgb);
+    }
+
+    free(wbuffer);
 }
 
 int getKb(void)

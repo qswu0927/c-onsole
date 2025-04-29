@@ -3,11 +3,13 @@
 #include <windows.h>
 #include <stdbool.h>
 
+extern HANDLE hConsole;
+extern HWND hWnd;
 // 是否支持虚拟终端序列
 extern bool vtSupported;
 
 void hideConsoleCursor(void);
 BOOL setConsoleFont(HANDLE hConsole, int size, const wchar_t *fontName);
-HANDLE setupConsole(SHORT w, SHORT h, wchar_t *title);
+void setupConsole(SHORT w, SHORT h, wchar_t *title);
 
 #endif
