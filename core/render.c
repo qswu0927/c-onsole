@@ -113,7 +113,7 @@ void renderSceneByBg(Scene *scene)
             }
         }
     }
-    WriteConsoleOutput(hConsole, charInfo, bufferSize, bufferCoord, &writeRegion);
+    WriteConsoleOutput(hStdOut, charInfo, bufferSize, bufferCoord, &writeRegion);
     free(charInfo);
 }
 
@@ -133,7 +133,7 @@ void renderScene(Scene *scene)
     DWORD written;
     for (int i = 0; i < scene->camera.h; i++)
     {
-        SetConsoleCursorPosition(hConsole, (COORD){0, i});
+        SetConsoleCursorPosition(hStdOut, (COORD){0, i});
         for (int j = 0; j < scene->camera.w; j++)
         {
             Rgb rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb;
@@ -144,7 +144,7 @@ void renderScene(Scene *scene)
             // 直接写入（避免snprintf开销）
             int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
                               rgb.r, rgb.g, rgb.b, rgb.br, rgb.bg, rgb.bb);
-            WriteConsoleA(hConsole, colorSeq, len, &written, NULL);
+            WriteConsoleA(hStdOut, colorSeq, len, &written, NULL);
 #if true
             // 每个坐标按实际字符数进行处理
             wchar_t *wstr = scene->buffer[scene->camera.y + i][scene->camera.x + j].ch;
@@ -154,23 +154,23 @@ void renderScene(Scene *scene)
                 size_t length = wcslen(wstr);
                 if (length > 0)
                 {
-                    WriteConsoleW(hConsole, wstr, (DWORD)length, &written, NULL);
+                    WriteConsoleW(hStdOut, wstr, (DWORD)length, &written, NULL);
                 }
             }
             else
             {
                 // 处理空指针情况，比如写入空格或其他占位符
                 static const wchar_t space = L' ';
-                WriteConsoleW(hConsole, &space, 1, &written, NULL);
+                WriteConsoleW(hStdOut, &space, 1, &written, NULL);
             }
 #else
             // 每个坐标统一按两个字符数进行处理
-            WriteConsoleW(hConsole, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
+            WriteConsoleW(hStdOut, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
 #endif
         }
     }
     // 重置颜色
-    WriteConsoleA(hConsole, "\x1b[0m", 4, &written, NULL);
+    WriteConsoleA(hStdOut, "\x1b[0m", 4, &written, NULL);
     clearScene(scene);
 }
 
@@ -265,10 +265,10 @@ void freeObject(Object **objPtr)
 void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
 {
     // 设置光标位置
-    SetConsoleCursorPosition(hConsole, (COORD){x, y});
+    SetConsoleCursorPosition(hStdOut, (COORD){x, y});
 
     // 设置文本颜色
-    SetConsoleTextAttribute(hConsole, color);
+    SetConsoleTextAttribute(hStdOut, color);
 
     // 使用可变参数列表来格式化字符串
     va_list args;
@@ -292,7 +292,7 @@ void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
 
     // 获取控制台宽度
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hConsole, &csbi);
+    GetConsoleScreenBufferInfo(hStdOut, &csbi);
     SHORT consoleWidth = csbi.dwSize.X;
 
     // 计算剩余宽度并填充空白字符
@@ -304,7 +304,7 @@ void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
     free(buffer);
 
     // 恢复默认文本颜色
-    SetConsoleTextAttribute(hConsole, 7);
+    SetConsoleTextAttribute(hStdOut, 7);
 
     // 结束可变参数列表
     va_end(args);

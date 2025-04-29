@@ -23,7 +23,7 @@ void updateMap(Object *map)
 Rgb getMapRgb(Object *map, SHORT i, SHORT j)
 {
     if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
-        return (Rgb){0, 0, 0, 0, 128, 128};
+        return (Rgb){0, 0, 0, 0, 108, 108};
 
     if (map->data[i][j])
         return getBlockColor(map->data[i][j]);

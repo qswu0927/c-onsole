@@ -1,7 +1,8 @@
 #include "console.h"
 #include <stdio.h>
 
-HANDLE hConsole = NULL;
+HANDLE hStdOut = NULL;
+HANDLE hStdIn = NULL;
 HWND hWnd = NULL;
 bool vtSupported = false;
 
@@ -9,7 +10,7 @@ bool getVtSupport(void)
 {
 #ifdef _WIN32
     DWORD mode = 0;
-    return GetConsoleMode(hConsole, &mode) &&
+    return GetConsoleMode(hStdOut, &mode) &&
            (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #else
     return true; // 非Windows默认支持
@@ -19,15 +20,15 @@ bool getVtSupport(void)
 // 启用虚拟终端序列处理
 int enableVirtualTerminalProcessing(void)
 {
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hStdOut == INVALID_HANDLE_VALUE)
         return -1;
 
     DWORD dwMode = 0;
-    if (!GetConsoleMode(hConsole, &dwMode))
+    if (!GetConsoleMode(hStdOut, &dwMode))
         return -1;
 
     dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(hConsole, dwMode))
+    if (!SetConsoleMode(hStdOut, dwMode))
         return -1;
 
     return 0;
@@ -38,13 +39,13 @@ void disableConsoleTextSelection(void)
 {
     DWORD consoleMode;
 
-    GetConsoleMode(hConsole, &consoleMode);
+    GetConsoleMode(hStdOut, &consoleMode);
 
     // 禁用快速编辑模式（鼠标选取）
     consoleMode &= ~ENABLE_QUICK_EDIT_MODE;
     // 禁用鼠标输入
     consoleMode &= ~ENABLE_MOUSE_INPUT;
-    SetConsoleMode(hConsole, consoleMode);
+    SetConsoleMode(hStdOut, consoleMode);
 }
 
 // 禁止调整控制台窗口大小
@@ -64,13 +65,13 @@ void disableConsoleResize(void)
 void hideConsoleCursor(void)
 {
     CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(hConsole, &cursorInfo);
+    GetConsoleCursorInfo(hStdOut, &cursorInfo);
     cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(hConsole, &cursorInfo);
+    SetConsoleCursorInfo(hStdOut, &cursorInfo);
 }
 
 // 设置控制台字体（支持大小、粗细、字体名）
-BOOL setConsoleFont(HANDLE hConsole, int size, const wchar_t *fontName)
+BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName)
 {
     CONSOLE_FONT_INFOEX fontInfo = {0};
     fontInfo.cbSize = sizeof(fontInfo);
@@ -81,7 +82,7 @@ BOOL setConsoleFont(HANDLE hConsole, int size, const wchar_t *fontName)
     fontInfo.FontWeight = FW_NORMAL;                    // 粗细（FW_BOLD 加粗）
     wcscpy_s(fontInfo.FaceName, LF_FACESIZE, fontName); // 字体名（如 L"Consolas"）
 
-    return SetCurrentConsoleFontEx(hConsole, FALSE, &fontInfo);
+    return SetCurrentConsoleFontEx(hStdOut, FALSE, &fontInfo);
 }
 
 // 置顶控制台窗口
@@ -116,9 +117,18 @@ void setConsoleWindowCenter(void)
         SWP_NOSIZE | SWP_NOZORDER);
 }
 
+void enableMouseInput(void)
+{
+    DWORD fdwSaveOldMode;
+    GetConsoleMode(hStdIn, &fdwSaveOldMode);
+    DWORD fdwMode = fdwSaveOldMode | ENABLE_MOUSE_INPUT;
+    SetConsoleMode(hStdIn, fdwMode);
+}
+
 void setupConsole(SHORT w, SHORT h, wchar_t *title)
 {
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    hStdIn = GetStdHandle(STD_INPUT_HANDLE);
     hWnd = GetConsoleWindow();
 
     // 启用虚拟终端序列处理
@@ -132,16 +142,16 @@ void setupConsole(SHORT w, SHORT h, wchar_t *title)
     SetConsoleTitleW(title);
 
     // 设置控制台字体，其他推荐：|新宋体|黑体|MS Gothic
-    setConsoleFont(hConsole, 18, L"黑体");
+    setConsoleFont(hStdOut, 18, L"黑体");
 
     // 获取当前窗口大小
     // CONSOLE_SCREEN_BUFFER_INFO csbi;
-    // GetConsoleScreenBufferInfo(hConsole, &csbi);
+    // GetConsoleScreenBufferInfo(hStdOut, &csbi);
     // SHORT width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
     // SHORT height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
 
     // 1. 获取最大可能尺寸
-    COORD maxSize = GetLargestConsoleWindowSize(hConsole);
+    COORD maxSize = GetLargestConsoleWindowSize(hStdOut);
     // 2. 检查请求的尺寸是否合理
     if (w < 12 || w > maxSize.X || h < 1 || h > maxSize.Y)
     {
@@ -149,25 +159,25 @@ void setupConsole(SHORT w, SHORT h, wchar_t *title)
         getchar();
     }
     // 3. 先设置缓冲区高度足够大
-    if (!SetConsoleScreenBufferSize(hConsole, (COORD){maxSize.X, maxSize.Y}))
+    if (!SetConsoleScreenBufferSize(hStdOut, (COORD){maxSize.X, maxSize.Y}))
     {
         printf("无法设置缓冲区! 错误: %lu\n按回车键继续", GetLastError());
         getchar();
     }
     // 4. 缩小窗口到目标尺寸
-    if (!SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
+    if (!SetConsoleWindowInfo(hStdOut, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
     {
         printf("无法缩小窗口! 错误: %lu\n按回车键继续", GetLastError());
         getchar();
     }
     // 5. 最后设置缓冲区大小
-    if (!SetConsoleScreenBufferSize(hConsole, (COORD){w, h}))
+    if (!SetConsoleScreenBufferSize(hStdOut, (COORD){w, h}))
     {
         printf("无法设置最终缓冲区! 错误: %lu\n按回车键继续", GetLastError());
         getchar();
     }
     // 6. 再次设置窗口大小，解决多一行一列的问题
-    if (!SetConsoleWindowInfo(hConsole, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
+    if (!SetConsoleWindowInfo(hStdOut, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
     {
         printf("无法设置最终窗口! 错误: %lu\n按回车键继续", GetLastError());
         getchar();
@@ -181,4 +191,6 @@ void setupConsole(SHORT w, SHORT h, wchar_t *title)
     hideConsoleCursor();
     disableConsoleTextSelection();
     disableConsoleResize();
+
+    enableMouseInput();
 }

@@ -126,7 +126,7 @@ START:
             }
             else if (k == 'A' || k == 0xE04B)
             {
-                if (!isCollided(block, map, -1, 0))
+                if (!isPaused && !isCollided(block, map, -1, 0))
                 {
                     block->x -= 1;
                     playSound2(3, 800, 30, 0);
@@ -134,7 +134,7 @@ START:
             }
             else if (k == 'D' || k == 0xE04D)
             {
-                if (!isCollided(block, map, 1, 0))
+                if (!isPaused && !isCollided(block, map, 1, 0))
                 {
                     block->x += 1;
                     playSound2(3, 800, 30, 0);
@@ -142,11 +142,12 @@ START:
             }
             else if (k == 'W' || k == 0xE048)
             {
-                rotateBlock(block, map);
+                if (!isPaused)
+                    rotateBlock(block, map);
             }
             else if (k == 'S' || k == 0xE050)
             {
-                if (!isCollided(block, map, 0, 1))
+                if (!isPaused && !isCollided(block, map, 0, 1))
                 {
                     block->y += 1;
                     playSound2(3, 800, 30, 0);
@@ -154,13 +155,32 @@ START:
             }
             else if (k == 'F')
             {
-                while (!isCollided(block, map, 0, 1))
+                while (!isPaused && !isCollided(block, map, 0, 1))
                     block->y += 1;
             }
-            else if (k == 'Q')
+        }
+
+        INPUT_RECORD irInBuf[128];
+        DWORD cNumRead;
+        // 非阻塞检查事件
+        PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
+        if (cNumRead > 0)
+        {
+            ReadConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
+
+            for (DWORD i = 0; i < cNumRead; i++)
             {
-                if (!isCollided(block, map, 0, -1))
-                    block->y -= 1;
+                if (irInBuf[i].EventType == MOUSE_EVENT)
+                {
+                    MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
+
+                    // 鼠标左键按下
+                    if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)
+                    {
+                        while (!isPaused && !isCollided(block, map, 0, 1))
+                            block->y += 1;
+                    }
+                }
             }
         }
 
@@ -178,16 +198,15 @@ START:
 
         SHORT row = nextBlock->y + nextBlock->h + 1;
         SHORT col = w + 1;
-        const Rgb rgb = {120, 120, 120, 0, 0, 0};
-        setSceneStr(scene, col, 0, rgb, "下一个:");
-        setSceneStr(scene, col, row++, rgb, "得分: %6d", score);
-        setSceneStr(scene, col, row++, rgb, "最高分: %4d", config.maxScore);
-        setSceneStr(scene, col, row++, rgb, "输出模式: %d，按M切换", scene->mode);
-        setSceneStr(scene, col, row++, rgb, "移动: ASD|方向键");
-        setSceneStr(scene, col, row++, rgb, "旋转: W|↑键");
-        setSceneStr(scene, col, row++, rgb, "速降: F键");
-        setSceneStr(scene, col, row++, rgb, "退出: Esc键");
-        setSceneStr(scene, col, row++, rgb, "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
+        setSceneStr(scene, col, 0, Rgb(120, 120, 120), "下一个:");
+        setSceneStr(scene, col, row++, Rgb(155, 155, 0), "得分: %6d", score);
+        setSceneStr(scene, col, row++, Rgb(205, 155, 0), "最高分: %4d", config.maxScore);
+        setSceneStr(scene, col, row++, (Rgb){0, 0, 0, 120, 120, 120}, "输出模式: %d，按M切换", scene->mode);
+        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: ASD|方向键");
+        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "旋转: W|↑键");
+        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "速降: F键|鼠标左键");
+        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
+        setSceneStr(scene, col, row++, Rgb(79, 79, 79), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
 
         renderScene(scene);
 
@@ -197,6 +216,7 @@ START:
     freeObject(&map);
     freeScene(&scene);
 
-    CloseHandle(hConsole);
+    CloseHandle(hStdOut);
+    CloseHandle(hStdIn);
     return 0;
 }

@@ -2,6 +2,9 @@
 #define RENDER_H
 #include <windows.h>
 
+#define Rgb(r, g, b) ((Rgb){r, g, b, 0, 0, 0})
+#define Rgbb(r, g, b) ((Rgb){0, 0, 0, r, g, b})
+
 typedef struct
 {
     SHORT fps;

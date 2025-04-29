@@ -23,9 +23,7 @@ const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // S
     {{0, 0, 0, 0}, {0, 6, 6, 0}, {6, 6, 0, 0}, {0, 0, 0, 0}},
     // Z
-    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}},
-    // Z
-    {{0, 0, 0, 0}, {0, 7, 0, 0}, {7, 7, 7, 0}, {0, 7, 0, 0}}};
+    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}}};
 
 Rgb getBlockColor(SHORT index)
 {
@@ -33,7 +31,7 @@ Rgb getBlockColor(SHORT index)
         {0},
         {0, 0, 0, 0, 158, 96},     // 常春藤绿
         {0, 0, 0, 255, 185, 15},   // 向日葵黄
-        {0, 0, 0, 198, 226, 255},  // 月光蓝
+        {0, 0, 0, 0, 195, 179},    // 石青
         {0, 0, 0, 210, 105, 30},   // 可可棕
         {0, 0, 0, 65, 105, 225},   // 皇家蓝
         {0, 0, 0, 250, 128, 114},  // 鲑鱼红
@@ -45,12 +43,11 @@ Object *newBlock(SHORT x, SHORT y)
 {
     SHORT index = rand() % (sizeof(TETROMINOS) / sizeof(TETROMINOS[0]));
     Object *block = newObject(x, y, BLOCK_WIDTH, BLOCK_HEIGHT);
-    int rd = rand() % 1000;
     for (int i = 0; i < BLOCK_HEIGHT; i++)
     {
         for (int j = 0; j < BLOCK_WIDTH; j++)
         {
-            block->data[i][j] = rd == 0 ? (rand() % 2 ? index + 1 : 0) : TETROMINOS[index][i][j];
+            block->data[i][j] = TETROMINOS[index][i][j];
         }
     }
     // 随机旋转
