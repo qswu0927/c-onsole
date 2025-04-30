@@ -71,8 +71,9 @@ int main(void)
     SHORT w = 12, h = 22;
     setupConsole((w + 12) * 2, h, L"Tetris");
 
-START:
     Scene *scene = newScene(w + 12, h);
+START:
+    isPaused = false;
     Object *map = newObject(0, 0, w, h);
     updateMap(map);
     Object *block = NULL;
@@ -86,7 +87,6 @@ START:
                523, 100, 20,
                494, 100, 20,
                440, 100, 20);
-    // system("cls");
     while (!isQuit)
     {
         frameStart(&fr);
@@ -94,13 +94,9 @@ START:
         if (block)
         {
             if (block->status == 2)
-            {
-                goto START;
-            }
+                isPaused = true;
             else if (block->status == 1)
-            {
                 freeObject(&block);
-            }
         }
 
         if (!block)
@@ -117,7 +113,15 @@ START:
                 isQuit = true;
             else if (k == ' ')
             {
-                isPaused = !isPaused;
+                if (block->status == 2)
+                {
+                    freeObject(&map);
+                    freeObject(&block);
+                    freeObject(&nextBlock);
+                    goto START;
+                }
+                else
+                    isPaused = !isPaused;
             }
             else if (k == 'M')
             {
@@ -199,12 +203,22 @@ START:
         SHORT row = nextBlock->y + nextBlock->h + 1;
         SHORT col = w + 1;
         setSceneStr(scene, col, 0, Rgb(120, 120, 120), "下一个:");
-        setSceneStr(scene, col, row++, Rgb(155, 155, 0), "得分: %6d", score);
-        setSceneStr(scene, col, row++, Rgb(205, 155, 0), "最高分: %4d", config.maxScore);
+        setSceneStr(scene, col, row++, Rgb(155, 155, 0), "得  分: %6d", score);
+        setSceneStr(scene, col, row++, Rgb(205, 155, 0), "最高分: %6d", config.maxScore);
         setSceneStr(scene, col, row++, (Rgb){0, 0, 0, 120, 120, 120}, "输出模式: %d，按M切换", scene->mode);
         setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: ASD|方向键");
         setSceneStr(scene, col, row++, Rgb(120, 120, 120), "旋转: W|↑键");
         setSceneStr(scene, col, row++, Rgb(120, 120, 120), "速降: F键|鼠标左键");
+        if (block->status == 2)
+        {
+            static SHORT count = 0;
+            if (count++ > 10)
+                count = 0;
+            setSceneStr(scene, w / 2 - 3, h / 3, count > 5 ? Rgb(200, 50, 0) : (Rgb){200, 200, 200, 200, 50, 0}, "😂游戏结束😂");
+            setSceneStr(scene, col, row++, Rgb(count > 5 ? 100 : 200, 200, 0), "重新开始: 空格键");
+        }
+        else
+            setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: 空格键");
         setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
         setSceneStr(scene, col, row++, Rgb(79, 79, 79), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
 
@@ -214,6 +228,8 @@ START:
     }
 
     freeObject(&map);
+    freeObject(&block);
+    freeObject(&nextBlock);
     freeScene(&scene);
 
     CloseHandle(hStdOut);

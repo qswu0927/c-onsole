@@ -342,6 +342,9 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
         if (scene->buffer[y][x].ch != NULL)
             free(scene->buffer[y][x].ch);
 
+        // 检查是否是代理对（Emoji）
+        bool isSurrogate = (wbuffer[i] >= 0xD800 && wbuffer[i] <= 0xDBFF);
+
         // 当前为半宽字符且不存在未配对的，则该位置分配两个字符
         if (wbuffer[i] <= 0x7F && !hasHalfCh)
         {
@@ -351,6 +354,14 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
             if (wbuffer[i] > 0x7F)
                 hasHalfCh = true;
             scene->buffer[y][x].ch[1] = wbuffer[i] == L'\0' ? L' ' : wbuffer[i++];
+            scene->buffer[y][x].ch[2] = L'\0';
+        }
+        else if (isSurrogate)
+        {
+            // Emoji（代理对，占 2 个 wchar_t）
+            scene->buffer[y][x].ch = (wchar_t *)malloc(3 * sizeof(wchar_t));
+            scene->buffer[y][x].ch[0] = wbuffer[i++];
+            scene->buffer[y][x].ch[1] = wbuffer[i++];
             scene->buffer[y][x].ch[2] = L'\0';
         }
         else
