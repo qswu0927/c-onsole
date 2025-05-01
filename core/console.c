@@ -123,6 +123,11 @@ void enableMouseInput(void)
     GetConsoleMode(hStdIn, &fdwSaveOldMode);
     DWORD fdwMode = fdwSaveOldMode | ENABLE_MOUSE_INPUT;
     SetConsoleMode(hStdIn, fdwMode);
+    if (vtSupported)
+    {
+        // 启用扩展鼠标报告模式
+        printf("\x1b[?1003h\x1b[?1006h");
+    }
 }
 
 void setupConsole(SHORT w, SHORT h, wchar_t *title)
@@ -193,4 +198,15 @@ void setupConsole(SHORT w, SHORT h, wchar_t *title)
     disableConsoleResize();
 
     enableMouseInput();
+}
+
+void freeConsole(void)
+{
+    if (vtSupported)
+    {
+        // 关闭鼠标报告
+        printf("\x1b[?1003l\x1b[?1006l");
+    }
+    CloseHandle(hStdOut);
+    CloseHandle(hStdIn);
 }

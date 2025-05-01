@@ -11,11 +11,12 @@ typedef struct
 {
     RenderMode mode;
     int maxScore;
+    bool mouseOp;
 } Config;
 
 bool isPaused = false;
 bool isQuit = false;
-Config config = {.mode = RM_BG, .maxScore = 0};
+Config config = {.mode = RM_BG, .maxScore = 0, .mouseOp = false};
 
 void loadConfig(const char *filename, Config *config)
 {
@@ -111,7 +112,7 @@ START:
             int k = getKb();
             if (k == 27)
                 isQuit = true;
-            else if (k == ' ')
+            else if (k == 'P')
             {
                 if (block->status == 2)
                 {
@@ -157,7 +158,7 @@ START:
                     playSound2(3, 800, 30, 0);
                 }
             }
-            else if (k == 'F')
+            else if (k == ' ')
             {
                 while (!isPaused && !isCollided(block, map, 0, 1))
                     block->y += 1;
@@ -166,6 +167,7 @@ START:
 
         INPUT_RECORD irInBuf[128];
         DWORD cNumRead;
+        COORD currentPos;
         // 非阻塞检查事件
         PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
         if (cNumRead > 0)
@@ -183,6 +185,25 @@ START:
                     {
                         while (!isPaused && !isCollided(block, map, 0, 1))
                             block->y += 1;
+                    }
+
+                    if (mer.dwButtonState & RIGHTMOST_BUTTON_PRESSED)
+                    {
+                        if (!isPaused)
+                            rotateBlock(block, map);
+                    }
+                    // 鼠标移动检测
+                    if (mer.dwEventFlags & MOUSE_MOVED)
+                    {
+                        currentPos = mer.dwMousePosition;
+                        int offset = currentPos.X / 2 > getBlockX(block) ? 1 : -1;
+                        while (!isPaused && !isCollided(block, map, offset, 0))
+                        {
+                            if (currentPos.X / 2 == getBlockX(block))
+                                break;
+                            block->x += offset;
+                            playSound2(3, 800, 30, 0);
+                        }
                     }
                 }
             }
@@ -203,24 +224,32 @@ START:
         SHORT row = nextBlock->y + nextBlock->h + 1;
         SHORT col = w + 1;
         setSceneStr(scene, col, 0, Rgb(120, 120, 120), "下一个:");
-        setSceneStr(scene, col, row++, Rgb(155, 155, 0), "得  分: %6d", score);
-        setSceneStr(scene, col, row++, Rgb(205, 155, 0), "最高分: %6d", config.maxScore);
-        setSceneStr(scene, col, row++, (Rgb){0, 0, 0, 120, 120, 120}, "输出模式: %d，按M切换", scene->mode);
+        setSceneStr(scene, col, row++, Rgb(155, 155, 0), "得  分: %5d", score);
+        setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
+        setSceneStr(scene, col, row++, (Rgb){0, 0, 0, 100, 100, 100}, "输出模式: %d，按M切换", scene->mode);
         setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: ASD|方向键");
-        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "旋转: W|↑键");
-        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "速降: F键|鼠标左键");
+        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "旋转: W|上键");
+        setSceneStr(scene, col, row++, Rgb(120, 120, 120), "速降: 空格键");
         if (block->status == 2)
         {
             static SHORT count = 0;
             if (count++ > 10)
                 count = 0;
             setSceneStr(scene, w / 2 - 3, h / 3, count > 5 ? Rgb(200, 50, 0) : (Rgb){200, 200, 200, 200, 50, 0}, "😂游戏结束😂");
-            setSceneStr(scene, col, row++, Rgb(count > 5 ? 100 : 200, 200, 0), "重新开始: 空格键");
+            setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
         }
         else
-            setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: 空格键");
+            setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: P键");
         setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
         setSceneStr(scene, col, row++, Rgb(79, 79, 79), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
+        if (config.mouseOp)
+        {
+            setSceneStr(scene, col, row++, Rgb(79, 79, 79), "鼠标:%d,%d", currentPos.X, currentPos.Y);
+        }
+        else
+        {
+            setSceneStr(scene, col, row++, Rgb(110, 110, 110), "启用鼠标控制: L键");
+        }
 
         renderScene(scene);
 
@@ -232,7 +261,6 @@ START:
     freeObject(&nextBlock);
     freeScene(&scene);
 
-    CloseHandle(hStdOut);
-    CloseHandle(hStdIn);
+    freeConsole();
     return 0;
 }

@@ -3,8 +3,10 @@
 #include <stdbool.h>
 #include "../core/render.h"
 
+wchar_t *getBlockCh(SHORT index);
 Rgb getBlockColor(SHORT index);
 Object *newBlock(SHORT x, SHORT y);
+SHORT getBlockX(Object *block);
 bool isCollided(Object *block, Object *map, int offsetX, int offsetY);
 void rotateBlock(Object *block, Object *map);
 void updateBlock(Object *block, Object *map);

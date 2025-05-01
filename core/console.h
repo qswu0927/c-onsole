@@ -12,5 +12,6 @@ extern bool vtSupported;
 void hideConsoleCursor(void);
 BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName);
 void setupConsole(SHORT w, SHORT h, wchar_t *title);
+void freeConsole(void);
 
 #endif

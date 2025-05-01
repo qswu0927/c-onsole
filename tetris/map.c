@@ -23,7 +23,7 @@ void updateMap(Object *map)
 Rgb getMapRgb(Object *map, SHORT i, SHORT j)
 {
     if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
-        return (Rgb){0, 0, 0, 0, 108, 108};
+        return (Rgb){0, 0, 0, 0, 65, 65};
 
     if (map->data[i][j])
         return getBlockColor(map->data[i][j]);
@@ -38,7 +38,7 @@ void setSceneMap(Scene *scene, Object *map)
     {
         for (SHORT j = 0; j < map->w; j++)
         {
-            scene->buffer[i + map->y][j + map->x].ch = _wcsdup(L"  ");
+            scene->buffer[i + map->y][j + map->x].ch = getBlockCh(map->data[i][j]);
 
             if (vtSupported)
             {

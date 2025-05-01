@@ -8,7 +8,7 @@
 #define BLOCK_HEIGHT 4
 #define BLOCK_WIDTH 4
 
-// 方块形状定义
+// 基本方块
 const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // I
     {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
@@ -23,19 +23,34 @@ const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // S
     {{0, 0, 0, 0}, {0, 6, 6, 0}, {6, 6, 0, 0}, {0, 0, 0, 0}},
     // Z
-    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}}};
+    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}},
+    // 炸弹
+    {{0, 0, 0, 0}, {8, 0, 8, 0}, {0, 8, 0, 0}, {8, 0, 8, 0}}};
+
+// 炸弹方块
+const int BOMB[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
+    {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+    {{0, 0, 0, 0}, {0, 2, 2, 0}, {0, 2, 2, 0}, {0, 0, 0, 0}}};
+
+wchar_t *getBlockCh(SHORT index)
+{
+    if (index == 8)
+        return _wcsdup(L"💣");
+    return _wcsdup(L"  ");
+}
 
 Rgb getBlockColor(SHORT index)
 {
     const Rgb rgbs[] = {
         {0},
-        {0, 0, 0, 0, 158, 96},     // 常春藤绿
-        {0, 0, 0, 255, 185, 15},   // 向日葵黄
-        {0, 0, 0, 0, 195, 179},    // 石青
-        {0, 0, 0, 210, 105, 30},   // 可可棕
-        {0, 0, 0, 65, 105, 225},   // 皇家蓝
-        {0, 0, 0, 250, 128, 114},  // 鲑鱼红
-        {0, 0, 0, 147, 112, 219}}; // 藤萝紫
+        {0, 0, 0, 0, 158, 96},    // 常春藤绿
+        {0, 0, 0, 255, 185, 15},  // 向日葵黄
+        {0, 0, 0, 0, 195, 179},   // 石青
+        {0, 0, 0, 210, 105, 30},  // 可可棕
+        {0, 0, 0, 65, 105, 225},  // 皇家蓝
+        {0, 0, 0, 250, 128, 114}, // 鲑鱼红
+        {0, 0, 0, 147, 112, 219}, // 鲑鱼红
+        {255, 0, 0, 255, 0, 0}};  // 炸弹
     return rgbs[index];
 }
 
@@ -57,6 +72,21 @@ Object *newBlock(SHORT x, SHORT y)
     return block;
 }
 
+// 获取最靠左点X
+SHORT getBlockX(Object *block)
+{
+    for (int j = 0; j < block->w; j++)
+    {
+        for (int i = 0; i < block->h; i++)
+        {
+            if (block->data[i][j])
+            {
+                return j + block->x;
+            }
+        }
+    }
+}
+
 bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
 {
     for (int i = 0; i < block->h; i++)
@@ -65,10 +95,10 @@ bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
         {
             if (block->data[i][j])
             {
-                if (block->x + j + offsetX < 0 || block->x + j + offsetX >= map->w || block->y + i + offsetY < 0 || block->y + i + offsetY >= map->h)
-                    continue;
-                // 允许穿过顶部
-                if (block->y + i + offsetY == 0)
+                if (block->x + j + offsetX <= 0 || block->x + j + offsetX >= map->w - 1 || block->y + i + offsetY >= map->h - 1)
+                    return true;
+                // 允许穿过顶部掉落
+                if (block->y + i + offsetY <= 0)
                     continue;
                 if (map->data[block->y + i + offsetY][block->x + j + offsetX])
                     return true;
@@ -191,7 +221,8 @@ void setSceneBlock(Scene *scene, Object *block, Object *map)
             if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
                 continue;
 
-            scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
+            if (block->data[i][j])
+                scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
 
             if (vtSupported)
             {
@@ -210,7 +241,8 @@ void setSceneBlock(Scene *scene, Object *block, Object *map)
             if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
                 continue;
 
-            scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
+            if (block->data[i][j])
+                scene->buffer[i + block->y][j + block->x].ch = getBlockCh(block->data[i][j]);
 
             if (vtSupported)
             {
