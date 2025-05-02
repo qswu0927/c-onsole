@@ -30,6 +30,8 @@ typedef struct Node
 int listLen(Node *head);
 char *listToStr(Node *head, char *con);
 FILE *safeFopen(const char *filename, const char *mode);
+void loadConfig(const char *filename, void *config, size_t size);
+void saveConfig(const char *filename, void *config, size_t size);
 void shuffle(int arr[], int n);
 void rotate90Clockwise(int rows, int cols, CHAR **mat, CHAR **result);
 

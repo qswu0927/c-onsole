@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <stdbool.h>
 
+typedef void (*QuitFunc)(void);
+
 extern HANDLE hStdOut;
 extern HANDLE hStdIn;
 extern HWND hWnd;
@@ -12,6 +14,6 @@ extern bool vtSupported;
 void hideConsoleCursor(void);
 BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName);
 void setupConsole(SHORT w, SHORT h, wchar_t *title);
-void freeConsole(void);
+void setupClose(QuitFunc quit);
 
 #endif

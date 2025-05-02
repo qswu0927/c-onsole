@@ -85,6 +85,7 @@ SHORT getBlockX(Object *block)
             }
         }
     }
+    return -1;
 }
 
 bool isCollided(Object *block, Object *map, int offsetX, int offsetY)

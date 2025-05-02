@@ -1,10 +1,13 @@
 #include "console.h"
 #include <stdio.h>
+#include <signal.h>
+#include <time.h>
 
 HANDLE hStdOut = NULL;
 HANDLE hStdIn = NULL;
 HWND hWnd = NULL;
 bool vtSupported = false;
+static QuitFunc quitFunc = NULL;
 
 bool getVtSupport(void)
 {
@@ -117,6 +120,7 @@ void setConsoleWindowCenter(void)
         SWP_NOSIZE | SWP_NOZORDER);
 }
 
+// 启用鼠标输入
 void enableMouseInput(void)
 {
     DWORD fdwSaveOldMode;
@@ -130,6 +134,36 @@ void enableMouseInput(void)
     }
 }
 
+void handleClose(void)
+{
+    if (quitFunc != NULL)
+        quitFunc();
+
+    if (vtSupported)
+    {
+        // 关闭鼠标报告
+        printf("\x1b[?1003l\x1b[?1006l");
+    }
+    CloseHandle(hStdOut);
+    CloseHandle(hStdIn);
+}
+
+void handleSigint(int _)
+{
+    handleClose();
+}
+
+BOOL WINAPI handleConsole(DWORD event)
+{
+    if (event == CTRL_C_EVENT || event == CTRL_CLOSE_EVENT)
+    {
+        handleClose();
+        return TRUE;
+    }
+    return FALSE;
+}
+
+// 设置控制台
 void setupConsole(SHORT w, SHORT h, wchar_t *title)
 {
     hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -196,17 +230,19 @@ void setupConsole(SHORT w, SHORT h, wchar_t *title)
     hideConsoleCursor();
     disableConsoleTextSelection();
     disableConsoleResize();
-
     enableMouseInput();
+
+    srand((unsigned int)time(NULL));
+
+    // 程序正常退出(main 返回或调用 exit)
+    atexit(handleClose);
+    // 按 Ctrl+C 终止程序
+    signal(SIGINT, handleSigint);
+    // Windows控制台关闭、注销、关机等
+    SetConsoleCtrlHandler(handleConsole, TRUE);
 }
 
-void freeConsole(void)
+void setupClose(QuitFunc quit)
 {
-    if (vtSupported)
-    {
-        // 关闭鼠标报告
-        printf("\x1b[?1003l\x1b[?1006l");
-    }
-    CloseHandle(hStdOut);
-    CloseHandle(hStdIn);
+    quitFunc = quit;
 }

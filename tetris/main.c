@@ -1,5 +1,3 @@
-#include <time.h>
-#include <signal.h>
 #include "../core/util.h"
 #include "../core/console.h"
 #include "../core/render.h"
@@ -18,59 +16,17 @@ bool isPaused = false;
 bool isQuit = false;
 Config config = {.mode = RM_BG, .maxScore = 0, .mouseOp = false};
 
-void loadConfig(const char *filename, Config *config)
-{
-    FILE *file = safeFopen(filename, "rb");
-    if (!file)
-        return;
-    fread(config, sizeof(Config), 1, file);
-    fclose(file);
-}
-
-void saveConfig(const char *filename, Config *config)
-{
-    FILE *file = safeFopen(filename, "wb");
-    fwrite(config, sizeof(Config), 1, file);
-    fclose(file);
-}
-
 void quit(void)
 {
-    saveConfig("config.dat", &config);
-}
-
-void handleSigint(int _)
-{
-    quit();
-}
-
-BOOL WINAPI handleConsole(DWORD event)
-{
-    if (event == CTRL_C_EVENT || event == CTRL_CLOSE_EVENT)
-    {
-        quit();
-        return TRUE;
-    }
-    return FALSE;
-}
-
-void init(void)
-{
-    // 程序正常退出（main 返回或调用 exit()）
-    atexit(quit);
-    // 按 Ctrl+C 终止程序
-    signal(SIGINT, handleSigint);
-    // Windows控制台关闭、注销、关机等
-    SetConsoleCtrlHandler(handleConsole, TRUE);
-    loadConfig("config.dat", &config);
-    srand((unsigned int)time(NULL));
+    saveConfig("config.dat", &config, sizeof(Config));
 }
 
 int main(void)
 {
-    init();
+    loadConfig("config.dat", &config, sizeof(Config));
     SHORT w = 12, h = 22;
     setupConsole((w + 12) * 2, h, L"Tetris");
+    setupClose(quit);
 
     Scene *scene = newScene(w + 12, h);
 START:
@@ -116,9 +72,9 @@ START:
             {
                 if (block->status == 2)
                 {
-                    freeObject(&map);
                     freeObject(&block);
                     freeObject(&nextBlock);
+                    freeObject(&map);
                     goto START;
                 }
                 else
@@ -256,11 +212,5 @@ START:
         frameEnd(&fr);
     }
 
-    freeObject(&map);
-    freeObject(&block);
-    freeObject(&nextBlock);
-    freeScene(&scene);
-
-    freeConsole();
     return 0;
 }

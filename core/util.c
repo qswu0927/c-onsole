@@ -63,6 +63,22 @@ FILE *safeFopen(const char *filename, const char *mode)
     return file;
 }
 
+void loadConfig(const char *filename, void *config, size_t size)
+{
+    FILE *file = safeFopen(filename, "rb");
+    if (!file)
+        return;
+    fread(config, size, 1, file);
+    fclose(file);
+}
+
+void saveConfig(const char *filename, void *config, size_t size)
+{
+    FILE *file = safeFopen(filename, "wb");
+    fwrite(config, size, 1, file);
+    fclose(file);
+}
+
 /**
  * 随机打乱数组（洗牌）
  */
