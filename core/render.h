@@ -4,6 +4,7 @@
 
 #define Rgb(r, g, b) ((Rgb){r, g, b, 0, 0, 0})
 #define Rgbb(r, g, b) ((Rgb){0, 0, 0, r, g, b})
+typedef void (*InputCallback)(INPUT_RECORD *inputRecord, WORD vkCode);
 
 typedef struct
 {
@@ -76,5 +77,7 @@ void rotateObject(Object *obj);
 void freeObject(Object **objPtr);
 void printStr(SHORT x, SHORT y, WORD color, const char *format, ...);
 void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...);
-int getKb(void);
+// int getKb(void);
+void getInput(InputCallback callback);
+
 #endif

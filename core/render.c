@@ -1,6 +1,6 @@
 #include "render.h"
 #include <stdio.h>
-#include <conio.h>
+// #include <conio.h>
 #include "util.h"
 #include "console.h"
 
@@ -389,7 +389,7 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
     free(wbuffer);
 }
 
-int getKb(void)
+/* int getKb(void)
 {
     if (!_kbhit())
         return -1;
@@ -404,4 +404,43 @@ int getKb(void)
     }
     // 普通键，转大写
     return toupper(ch);
+} */
+
+void getInput(InputCallback callback)
+{
+    if (callback == NULL)
+        return;
+
+    INPUT_RECORD irInBuf[128];
+    DWORD cNumRead;
+
+    // 检查输入（非阻塞）
+    if (!PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead))
+        return;
+
+    if (cNumRead == 0)
+        return;
+
+    // 读取输入
+    ReadConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
+
+    // 遍历所有输入事件，触发回调
+    for (DWORD i = 0; i < cNumRead; i++)
+    {
+        switch (irInBuf[i].EventType)
+        {
+        // 键盘事件
+        case KEY_EVENT:
+            if (irInBuf[i].Event.KeyEvent.bKeyDown)
+            {
+                WORD vkCode = irInBuf[i].Event.KeyEvent.wVirtualKeyCode;
+                callback(&irInBuf[i], vkCode);
+            }
+            break;
+
+        case MOUSE_EVENT:
+        case WINDOW_BUFFER_SIZE_EVENT:
+            break;
+        }
+    }
 }

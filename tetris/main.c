@@ -13,8 +13,68 @@ typedef struct
 } Config;
 
 bool isPaused = false;
+bool isRestart = false;
 bool isQuit = false;
+
 Config config = {.mode = RM_BG, .maxScore = 0, .mouseOp = false};
+Scene *scene = NULL;
+Object *map = NULL;
+Object *block = NULL;
+Object *nextBlock = NULL;
+
+void handleInputEvent(INPUT_RECORD *record, WORD vkCode)
+{
+    if (vkCode == 'A' || vkCode == VK_LEFT)
+    {
+        if (!isPaused && !isCollided(block, map, -1, 0))
+        {
+            block->x -= 1;
+            playSound2(3, 800, 30, 0);
+        }
+    }
+    else if (vkCode == 'D' || vkCode == VK_RIGHT)
+    {
+        if (!isPaused && !isCollided(block, map, 1, 0))
+        {
+            block->x += 1;
+            playSound2(3, 800, 30, 0);
+        }
+    }
+    else if (vkCode == 'W' || vkCode == VK_UP)
+    {
+        if (!isPaused)
+            rotateBlock(block, map);
+    }
+    else if (vkCode == 'S' || vkCode == VK_DOWN)
+    {
+        if (!isPaused && !isCollided(block, map, 0, 1))
+        {
+            block->y += 1;
+            playSound2(3, 800, 30, 0);
+        }
+    }
+    else if (vkCode == VK_SPACE)
+    {
+        while (!isPaused && !isCollided(block, map, 0, 1))
+            block->y += 1;
+    }
+    else if (vkCode == 'M')
+    {
+        scene->mode = (RenderMode)((scene->mode + 1) % RM_CNT);
+        config.mode = scene->mode;
+    }
+    else if (vkCode == 'P')
+    {
+        if (block->status == 2)
+            isRestart = true;
+        else
+            isPaused = !isPaused;
+    }
+    else if (vkCode == VK_ESCAPE)
+    {
+        isQuit = true;
+    }
+}
 
 void quit(void)
 {
@@ -28,13 +88,18 @@ int main(void)
     setupConsole((w + 12) * 2, h, L"Tetris");
     setupClose(quit);
 
-    Scene *scene = newScene(w + 12, h);
+    scene = newScene(w + 12, h);
 START:
     isPaused = false;
-    Object *map = newObject(0, 0, w, h);
+    if (map)
+        freeObject(&map);
+    map = newObject(0, 0, w, h);
     updateMap(map);
-    Object *block = NULL;
-    Object *nextBlock = newBlock(0, 0);
+    if (block)
+        freeObject(&block);
+    if (nextBlock)
+        freeObject(&nextBlock);
+    nextBlock = newBlock(0, 0);
     FrameRate fr = newFrameRate(12);
     // 开场音效
     playSound2(7 * 3, 659, 100, 20,
@@ -64,107 +129,59 @@ START:
             nextBlock = newBlock(w + 1, 1);
         }
 
+        getInput(handleInputEvent);
+        if (isRestart)
         {
-            int k = getKb();
-            if (k == 27)
-                isQuit = true;
-            else if (k == 'P')
-            {
-                if (block->status == 2)
-                {
-                    freeObject(&block);
-                    freeObject(&nextBlock);
-                    freeObject(&map);
-                    goto START;
-                }
-                else
-                    isPaused = !isPaused;
-            }
-            else if (k == 'M')
-            {
-                scene->mode = (RenderMode)((scene->mode + 1) % RM_CNT);
-                config.mode = scene->mode;
-            }
-            else if (k == 'A' || k == 0xE04B)
-            {
-                if (!isPaused && !isCollided(block, map, -1, 0))
-                {
-                    block->x -= 1;
-                    playSound2(3, 800, 30, 0);
-                }
-            }
-            else if (k == 'D' || k == 0xE04D)
-            {
-                if (!isPaused && !isCollided(block, map, 1, 0))
-                {
-                    block->x += 1;
-                    playSound2(3, 800, 30, 0);
-                }
-            }
-            else if (k == 'W' || k == 0xE048)
-            {
-                if (!isPaused)
-                    rotateBlock(block, map);
-            }
-            else if (k == 'S' || k == 0xE050)
-            {
-                if (!isPaused && !isCollided(block, map, 0, 1))
-                {
-                    block->y += 1;
-                    playSound2(3, 800, 30, 0);
-                }
-            }
-            else if (k == ' ')
-            {
-                while (!isPaused && !isCollided(block, map, 0, 1))
-                    block->y += 1;
-            }
+            isRestart = false;
+            goto START;
         }
+        /*
 
-        INPUT_RECORD irInBuf[128];
-        DWORD cNumRead;
-        COORD currentPos;
-        // 非阻塞检查事件
-        PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
-        if (cNumRead > 0)
-        {
-            ReadConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
-
-            for (DWORD i = 0; i < cNumRead; i++)
-            {
-                if (irInBuf[i].EventType == MOUSE_EVENT)
+                INPUT_RECORD irInBuf[128];
+                DWORD cNumRead;
+                COORD currentPos;
+                // 非阻塞检查事件
+                PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
+                if (cNumRead > 0)
                 {
-                    MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
+                    ReadConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
 
-                    // 鼠标左键按下
-                    if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)
+                    for (DWORD i = 0; i < cNumRead; i++)
                     {
-                        while (!isPaused && !isCollided(block, map, 0, 1))
-                            block->y += 1;
-                    }
-
-                    if (mer.dwButtonState & RIGHTMOST_BUTTON_PRESSED)
-                    {
-                        if (!isPaused)
-                            rotateBlock(block, map);
-                    }
-                    // 鼠标移动检测
-                    if (mer.dwEventFlags & MOUSE_MOVED)
-                    {
-                        currentPos = mer.dwMousePosition;
-                        int offset = currentPos.X / 2 > getBlockX(block) ? 1 : -1;
-                        while (!isPaused && !isCollided(block, map, offset, 0))
+                        if (irInBuf[i].EventType == MOUSE_EVENT)
                         {
-                            if (currentPos.X / 2 == getBlockX(block))
-                                break;
-                            block->x += offset;
-                            playSound2(3, 800, 30, 0);
+                            MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
+
+                            // 鼠标左键按下
+                            if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)
+                            {
+                                while (!isPaused && !isCollided(block, map, 0, 1))
+                                    block->y += 1;
+                            }
+
+                            if (mer.dwButtonState & RIGHTMOST_BUTTON_PRESSED)
+                            {
+                                if (!isPaused)
+                                    rotateBlock(block, map);
+                            }
+                            // 鼠标移动检测
+                            if (mer.dwEventFlags & MOUSE_MOVED)
+                            {
+                                currentPos = mer.dwMousePosition;
+                                int offset = currentPos.X / 2 > getBlockX(block) ? 1 : -1;
+                                while (!isPaused && !isCollided(block, map, offset, 0))
+                                {
+                                    if (currentPos.X / 2 == getBlockX(block))
+                                        break;
+                                    block->x += offset;
+                                    playSound2(3, 800, 30, 0);
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
 
+         */
         if (!isPaused)
         {
             updateBlock(block, map);
@@ -198,14 +215,14 @@ START:
             setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: P键");
         setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
         setSceneStr(scene, col, row++, Rgb(79, 79, 79), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
-        if (config.mouseOp)
-        {
-            setSceneStr(scene, col, row++, Rgb(79, 79, 79), "鼠标:%d,%d", currentPos.X, currentPos.Y);
-        }
-        else
-        {
-            setSceneStr(scene, col, row++, Rgb(110, 110, 110), "启用鼠标控制: L键");
-        }
+        // if (config.mouseOp)
+        // {
+        //     setSceneStr(scene, col, row++, Rgb(79, 79, 79), "鼠标:%d,%d", currentPos.X, currentPos.Y);
+        // }
+        // else
+        // {
+        //     setSceneStr(scene, col, row++, Rgb(110, 110, 110), "启用鼠标控制: L键");
+        // }
 
         renderScene(scene);
 
