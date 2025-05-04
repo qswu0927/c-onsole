@@ -166,7 +166,7 @@ void rotateBlock(Object *block, Object *map)
     block->h = w;
     block->x += offset.X;
     block->y += offset.Y;
-    playSound2(6, 600, 30, 0, 800, 30, 0);
+    playSoundSeq(6, 600, 30, 0, 800, 30, 0);
 }
 
 void updateBlock(Object *block, Object *map)
@@ -191,14 +191,14 @@ void updateBlock(Object *block, Object *map)
                     }
                 }
             }
-            playSound2(3, 400, 50, 0);
+            playSoundSeq(3, 400, 50, 0);
             block->status = 1;
             CreateThread(NULL, 0, clearLines, map, 0, NULL);
             // 结束游戏
             if (block->y <= 0)
             {
                 block->status = 2;
-                playSound2(6, 220, 300, 100, 175, 500, 0);
+                playSoundSeq(6, 220, 300, 100, 175, 500, 0);
             }
         }
         else

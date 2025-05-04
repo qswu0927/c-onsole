@@ -9,9 +9,10 @@ typedef struct
 {
     RenderMode mode;
     int maxScore;
+    bool mute;
     bool mouseInput;
 } Config;
-Config config = {.mode = RM_BG, .maxScore = 0, .mouseInput = false};
+Config config = {.mode = RM_BG, .maxScore = 0, .mute = false, .mouseInput = false};
 
 SHORT w = 12, h = 22;
 COORD currentPos;
@@ -33,7 +34,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         if (!isPaused && !isCollided(block, map, -1, 0))
         {
             block->x -= 1;
-            playSound2(3, 800, 30, 0);
+            playSoundSeq(3, 800, 30, 0);
         }
     }
     else if (vkCode == 'D' || vkCode == VK_RIGHT)
@@ -41,7 +42,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         if (!isPaused && !isCollided(block, map, 1, 0))
         {
             block->x += 1;
-            playSound2(3, 800, 30, 0);
+            playSoundSeq(3, 800, 30, 0);
         }
     }
     else if (vkCode == 'W' || vkCode == VK_UP || mState & RIGHTMOST_BUTTON_PRESSED)
@@ -54,7 +55,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         if (!isPaused && !isCollided(block, map, 0, 1))
         {
             block->y += 1;
-            playSound2(3, 800, 30, 0);
+            playSoundSeq(3, 800, 30, 0);
         }
     }
     else if (vkCode == VK_SPACE || mState & FROM_LEFT_1ST_BUTTON_PRESSED)
@@ -74,11 +75,10 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         else
             isPaused = !isPaused;
     }
+    else if (vkCode == 'K')
+        config.mute = !config.mute;
     else if (vkCode == 'L')
-    {
-        mouseInput = !mouseInput;
-        config.mouseInput = mouseInput;
-    }
+        config.mouseInput = !config.mouseInput;
     else if (vkCode == VK_ESCAPE)
     {
         isQuit = true;
@@ -101,7 +101,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
                 if (currentPos.X == getBlockX(block))
                     break;
                 block->x += offset;
-                playSound2(3, 800, 30, 0);
+                playSoundSeq(3, 800, 30, 0);
             }
         }
     }
@@ -129,6 +129,7 @@ void setMessage(void)
     else
         setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: P键");
     setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
+    setSceneStr(scene, col, row++, Rgb(110, 110, 110), config.mute ? "打开音效: K键" : "关闭音效: K键");
     if (config.mouseInput)
     {
         setSceneStr(scene, col, row++, Rgb(110, 110, 110), "禁用鼠标控制: L键");
@@ -152,7 +153,8 @@ void quit(void)
 int main(void)
 {
     loadConfig("config.dat", &config, sizeof(Config));
-    mouseInput = config.mouseInput;
+    mute = &config.mute;
+    mouseInput = &config.mouseInput;
     setupConsole((w + 12) * 2, h, L"Tetris");
     setupClose(quit);
 
@@ -170,13 +172,13 @@ START:
     nextBlock = newBlock(0, 0);
     fr = newFrameRate(12);
     // 开场音效
-    playSound2(7 * 3, 659, 100, 20,
-               494, 100, 20,
-               523, 100, 20,
-               587, 100, 20,
-               523, 100, 20,
-               494, 100, 20,
-               440, 100, 20);
+    playSoundSeq(7 * 3, 659, 100, 20,
+                 494, 100, 20,
+                 523, 100, 20,
+                 587, 100, 20,
+                 523, 100, 20,
+                 494, 100, 20,
+                 440, 100, 20);
     while (!isQuit)
     {
         frameStart(&fr);

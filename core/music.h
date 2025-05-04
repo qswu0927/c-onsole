@@ -12,7 +12,9 @@ typedef struct
     bool needFree;          // 是否需要释放data内存
 } SoundParams;
 
+extern bool *mute;
+
 void playSound(SoundParams *params);
-void playSound2(int count, ...);
+void playSoundSeq(int count, ...);
 
 #endif

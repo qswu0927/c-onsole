@@ -82,7 +82,7 @@ DWORD WINAPI clearLines(LPVOID lpParam)
             if (fullLineBegin == -1)
                 continue;
 
-            playSound2(12, 523, 80, 0, 587, 80, 0, 659, 80, 0, 684 + (fullLineBegin - fullLineEnd) * 30, 150, 0);
+            playSoundSeq(12, 523, 80, 0, 587, 80, 0, 659, 80, 0, 684 + (fullLineBegin - fullLineEnd) * 30, 150, 0);
             score += (fullLineBegin - fullLineEnd + 1) * (fullLineBegin - fullLineEnd + 1);
 
             // 闪烁效果

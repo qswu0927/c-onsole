@@ -1,6 +1,8 @@
 #include "music.h"
 #include <windows.h>
 
+bool *mute = false;
+
 DWORD WINAPI play8BitSound(LPVOID lpParam)
 {
     // 从参数中获取音效数据
@@ -11,7 +13,10 @@ DWORD WINAPI play8BitSound(LPVOID lpParam)
         int f = params->data[i++];
         int d = params->data[i++];
         int p = params->data[i++];
-        Beep(f, d);
+        if (*mute)
+            Sleep(d);
+        else
+            Beep(f, d);
         Sleep(p);
     }
 
@@ -31,6 +36,7 @@ DWORD WINAPI play8BitSound(LPVOID lpParam)
     return 0;
 }
 
+// 播放音效
 void playSound(SoundParams *params)
 {
     HANDLE hThread = CreateThread(
@@ -49,8 +55,8 @@ void playSound(SoundParams *params)
     }
 }
 
-// 可变参数版本的playSound函数
-void playSound2(int count, ...)
+// 播放音效序列
+void playSoundSeq(int count, ...)
 {
     // 分配足够的内存存储音效数据
     int *data = (int *)malloc(count * sizeof(int));

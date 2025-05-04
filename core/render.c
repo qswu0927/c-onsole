@@ -439,7 +439,7 @@ void getInput(InputCallback callback)
             break;
         // 鼠标事件
         case MOUSE_EVENT:
-            if (mouseInput)
+            if (*mouseInput)
             {
                 MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
                 callback(&irInBuf[i], 0, mer.dwButtonState);
