@@ -439,8 +439,11 @@ void getInput(InputCallback callback)
             break;
         // 鼠标事件
         case MOUSE_EVENT:
-            MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
-            callback(&irInBuf[i], 0, mer.dwButtonState);
+            if (mouseInput)
+            {
+                MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
+                callback(&irInBuf[i], 0, mer.dwButtonState);
+            }
             break;
         case WINDOW_BUFFER_SIZE_EVENT:
             break;

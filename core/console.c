@@ -7,6 +7,8 @@ HANDLE hStdOut = NULL;
 HANDLE hStdIn = NULL;
 HWND hWnd = NULL;
 bool vtSupported = false;
+bool mouseInput = false;
+
 static QuitFunc quitFunc = NULL;
 
 bool getVtSupport(void)

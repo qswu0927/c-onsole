@@ -10,6 +10,8 @@ extern HANDLE hStdIn;
 extern HWND hWnd;
 // 是否支持虚拟终端序列
 extern bool vtSupported;
+// 是否监听鼠标输入
+extern bool mouseInput;
 
 void hideConsoleCursor(void);
 BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName);
