@@ -4,7 +4,7 @@
 
 #define Rgb(r, g, b) ((Rgb){r, g, b, 0, 0, 0})
 #define Rgbb(r, g, b) ((Rgb){0, 0, 0, r, g, b})
-typedef void (*InputCallback)(INPUT_RECORD *inputRecord, WORD vkCode);
+typedef void (*InputCallback)(INPUT_RECORD *inputRecord, WORD vkCode, DWORD mState);
 
 typedef struct
 {

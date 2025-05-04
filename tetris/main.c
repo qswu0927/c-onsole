@@ -21,8 +21,9 @@ Scene *scene = NULL;
 Object *map = NULL;
 Object *block = NULL;
 Object *nextBlock = NULL;
+COORD currentPos;
 
-void handleInputEvent(INPUT_RECORD *record, WORD vkCode)
+void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
 {
     if (vkCode == 'A' || vkCode == VK_LEFT)
     {
@@ -40,7 +41,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode)
             playSound2(3, 800, 30, 0);
         }
     }
-    else if (vkCode == 'W' || vkCode == VK_UP)
+    else if (vkCode == 'W' || vkCode == VK_UP || mState & RIGHTMOST_BUTTON_PRESSED)
     {
         if (!isPaused)
             rotateBlock(block, map);
@@ -53,7 +54,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode)
             playSound2(3, 800, 30, 0);
         }
     }
-    else if (vkCode == VK_SPACE)
+    else if (vkCode == VK_SPACE || mState & FROM_LEFT_1ST_BUTTON_PRESSED)
     {
         while (!isPaused && !isCollided(block, map, 0, 1))
             block->y += 1;
@@ -73,6 +74,25 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode)
     else if (vkCode == VK_ESCAPE)
     {
         isQuit = true;
+    }
+
+    MOUSE_EVENT_RECORD mer = record->Event.MouseEvent;
+    // 鼠标移动检测
+    if (mer.dwEventFlags & MOUSE_MOVED && mer.dwButtonState == 0)
+    {
+        currentPos = mer.dwMousePosition;
+        currentPos.X /= 2;
+        if (currentPos.X < map->x + map->w)
+        {
+            int offset = currentPos.X > getBlockX(block) ? 1 : -1;
+            while (!isPaused && !isCollided(block, map, offset, 0))
+            {
+                if (currentPos.X == getBlockX(block))
+                    break;
+                block->x += offset;
+                playSound2(3, 800, 30, 0);
+            }
+        }
     }
 }
 
@@ -135,53 +155,7 @@ START:
             isRestart = false;
             goto START;
         }
-        /*
 
-                INPUT_RECORD irInBuf[128];
-                DWORD cNumRead;
-                COORD currentPos;
-                // 非阻塞检查事件
-                PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
-                if (cNumRead > 0)
-                {
-                    ReadConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
-
-                    for (DWORD i = 0; i < cNumRead; i++)
-                    {
-                        if (irInBuf[i].EventType == MOUSE_EVENT)
-                        {
-                            MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
-
-                            // 鼠标左键按下
-                            if (mer.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED)
-                            {
-                                while (!isPaused && !isCollided(block, map, 0, 1))
-                                    block->y += 1;
-                            }
-
-                            if (mer.dwButtonState & RIGHTMOST_BUTTON_PRESSED)
-                            {
-                                if (!isPaused)
-                                    rotateBlock(block, map);
-                            }
-                            // 鼠标移动检测
-                            if (mer.dwEventFlags & MOUSE_MOVED)
-                            {
-                                currentPos = mer.dwMousePosition;
-                                int offset = currentPos.X / 2 > getBlockX(block) ? 1 : -1;
-                                while (!isPaused && !isCollided(block, map, offset, 0))
-                                {
-                                    if (currentPos.X / 2 == getBlockX(block))
-                                        break;
-                                    block->x += offset;
-                                    playSound2(3, 800, 30, 0);
-                                }
-                            }
-                        }
-                    }
-                }
-
-         */
         if (!isPaused)
         {
             updateBlock(block, map);
@@ -215,14 +189,14 @@ START:
             setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: P键");
         setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
         setSceneStr(scene, col, row++, Rgb(79, 79, 79), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
-        // if (config.mouseOp)
-        // {
-        //     setSceneStr(scene, col, row++, Rgb(79, 79, 79), "鼠标:%d,%d", currentPos.X, currentPos.Y);
-        // }
-        // else
-        // {
-        //     setSceneStr(scene, col, row++, Rgb(110, 110, 110), "启用鼠标控制: L键");
-        // }
+        if (config.mouseOp)
+        {
+            setSceneStr(scene, col, row++, Rgb(79, 79, 79), "鼠标:%d,%d", currentPos.X, currentPos.Y);
+        }
+        else
+        {
+            setSceneStr(scene, col, row++, Rgb(110, 110, 110), "启用鼠标控制: L键");
+        }
 
         renderScene(scene);
 

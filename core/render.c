@@ -434,11 +434,14 @@ void getInput(InputCallback callback)
             if (irInBuf[i].Event.KeyEvent.bKeyDown)
             {
                 WORD vkCode = irInBuf[i].Event.KeyEvent.wVirtualKeyCode;
-                callback(&irInBuf[i], vkCode);
+                callback(&irInBuf[i], vkCode, 0);
             }
             break;
-
+        // 鼠标事件
         case MOUSE_EVENT:
+            MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
+            callback(&irInBuf[i], 0, mer.dwButtonState);
+            break;
         case WINDOW_BUFFER_SIZE_EVENT:
             break;
         }
