@@ -9,7 +9,7 @@
 #define BLOCK_WIDTH 4
 
 // 基本方块
-const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
+const SHORT TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // I
     {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
     // O
@@ -27,19 +27,35 @@ const int TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // 炸弹
     {{0, 0, 0, 0}, {8, 0, 8, 0}, {0, 8, 0, 0}, {8, 0, 8, 0}}};
 
-// 炸弹方块
-const int BOMB[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
-    {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
-    {{0, 0, 0, 0}, {0, 2, 2, 0}, {0, 2, 2, 0}, {0, 0, 0, 0}}};
-
-wchar_t *getBlockCh(SHORT index)
+wchar_t *getBlockCh(SHORT index, Scene *scene)
 {
-    if (index == 8)
-        return _wcsdup(L"💣");
-    return _wcsdup(L"  ");
+    if (scene->mode == 0)
+        return _wcsdup(L"  ");
+
+    if (scene->mode == 1)
+    {
+        wchar_t ch[] = L"哈啊哦嗯哇呀啦炸";
+
+        if (index == 0)
+            return _wcsdup(L"  ");
+        // 方式一
+        wchar_t temp[] = {ch[index - 1], L'\0'};
+        return _wcsdup(temp);
+    }
+
+    wchar_t ch[] = L"  😂😊🍉🌻🍁🍖🎈💣";
+    // 方式二
+    wchar_t *result = (wchar_t *)malloc(3 * sizeof(wchar_t));
+    if (result)
+    {
+        result[0] = ch[2 * index];
+        result[1] = ch[2 * index + 1];
+        result[2] = L'\0';
+    }
+    return result;
 }
 
-Rgb getBlockColor(SHORT index)
+Rgb getBlockColor(SHORT index, Scene *scene)
 {
     const Rgb rgbs[] = {
         {0},
@@ -49,14 +65,18 @@ Rgb getBlockColor(SHORT index)
         {0, 0, 0, 210, 105, 30},  // 可可棕
         {0, 0, 0, 65, 105, 225},  // 皇家蓝
         {0, 0, 0, 250, 128, 114}, // 鲑鱼红
-        {0, 0, 0, 147, 112, 219}, // 鲑鱼红
-        {255, 0, 0, 255, 0, 0}};  // 炸弹
-    return rgbs[index];
+        {0, 0, 0, 147, 112, 219}, // 藤萝紫
+        {0, 0, 0, 255, 0, 0}};    // 炸弹红
+    if (scene->mode == 0)
+        return rgbs[index];
+    return Rgb(rgbs[index].br, rgbs[index].bg, rgbs[index].bb);
 }
 
 Object *newBlock(SHORT x, SHORT y)
 {
     SHORT index = rand() % (sizeof(TETROMINOS) / sizeof(TETROMINOS[0]));
+    // if (rand() % 100 > 50)
+    //     index = 7;
     Object *block = newObject(x, y, BLOCK_WIDTH, BLOCK_HEIGHT);
     for (int i = 0; i < BLOCK_HEIGHT; i++)
     {
@@ -171,31 +191,61 @@ void rotateBlock(Object *block, Object *map)
 
 void updateBlock(Object *block, Object *map)
 {
-    static clock_t lastFallTime = 0;
+    static clock_t lastTime = 0;
     clock_t currentTime = clock();
-    if ((currentTime - lastFallTime) > 500)
+    if (currentTime - lastTime > 500)
     {
-        lastFallTime = currentTime;
+        lastTime = currentTime;
         if (isCollided(block, map, 0, 1))
         {
-            // 固定方块
-            for (int i = 0; i < block->h; i++)
+            bool isBomb = false;
+            for (SHORT i = 0; i < block->h; i++)
             {
-                for (int j = 0; j < block->w; j++)
+                for (SHORT j = 0; j < block->w; j++)
                 {
                     if (block->data[i][j])
                     {
-                        // 忽略场景外的部分
-                        if (block->y + i >= 0 && block->y + i < map->h && block->x + j >= 0 && block->x + j < map->w)
+                        // 炸弹
+                        if (block->data[i][j] == 8)
+                        {
+                            if (!isBomb)
+                                isBomb = true;
+                            for (SHORT r = i - 2; r <= i + 2; r++)
+                            {
+                                for (SHORT c = j - 1; c <= j + 1; c++)
+                                {
+                                    if (block->y + r > 0 && block->y + r < map->h - 1 && block->x + c > 0 && block->x + c < map->w - 1)
+                                        map->data[block->y + r][block->x + c] = 0;
+                                }
+                            }
+                        }
+                        //  固定方块
+                        else if (block->y + i > 0 && block->y + i < map->h - 1 && block->x + j > 0 && block->x + j < map->w - 1)
                             map->data[block->y + i][block->x + j] = block->data[i][j];
                     }
                 }
             }
-            playSoundSeq(3, 400, 50, 0);
+            if (isBomb)
+                playSoundSeq(10 * 3,
+                             // 中高频起始
+                             350, 30, 0,
+                             300, 30, 0,
+                             250, 30, 0,
+                             200, 30, 0,
+                             150, 30, 0,
+                             100, 30, 0,
+                             // 爆炸冲击波主体
+                             80, 100, 0, // 低频轰隆声
+                             60, 150, 0, // 更低的余震
+                             // 爆炸结束的"火花"声
+                             120, 40, 0,
+                             200, 30, 0);
+            else
+                playSoundSeq(3, 400, 50, 0);
             block->status = 1;
             CreateThread(NULL, 0, clearLines, map, 0, NULL);
             // 结束游戏
-            if (block->y <= 0)
+            if (block->y <= -block->h / 2)
             {
                 block->status = 2;
                 playSoundSeq(6, 220, 300, 100, 175, 500, 0);
@@ -208,12 +258,40 @@ void updateBlock(Object *block, Object *map)
     }
 }
 
-void setSceneBlock(Scene *scene, Object *block, Object *map)
+void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
 {
-    // 显示预期下落位置投影
-    SHORT currentY = block->y;
-    while (!isCollided(block, map, 0, 1))
-        block->y += 1;
+    if (showShadow)
+    {
+        // 显示预期下落位置投影
+        SHORT currentY = block->y;
+        while (!isCollided(block, map, 0, 1))
+            block->y += 1;
+        for (SHORT i = 0; i < block->h; i++)
+        {
+            for (SHORT j = 0; j < block->w; j++)
+            {
+                // 忽略场景外的部分
+                if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
+                    continue;
+
+                if (block->data[i][j])
+                    scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
+
+                if (vtSupported)
+                {
+                    if (block->data[i][j])
+                        scene->buffer[i + block->y][j + block->x].color.rgb = (Rgb){0, 0, 0, 50, 50, 50};
+                }
+            }
+        }
+        block->y = currentY;
+    }
+
+    static clock_t lastTime = 0;
+    clock_t currentTime = clock();
+    if (currentTime - lastTime > 200)
+        lastTime = currentTime;
+
     for (SHORT i = 0; i < block->h; i++)
     {
         for (SHORT j = 0; j < block->w; j++)
@@ -223,53 +301,12 @@ void setSceneBlock(Scene *scene, Object *block, Object *map)
                 continue;
 
             if (block->data[i][j])
-                scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
+                scene->buffer[i + block->y][j + block->x].ch = block->data[i][j] != 8 || currentTime - lastTime > 50 ? getBlockCh(block->data[i][j], scene) : _wcsdup(L"  ");
 
             if (vtSupported)
             {
                 if (block->data[i][j])
-                    scene->buffer[i + block->y][j + block->x].color.rgb = (Rgb){0, 0, 0, 50, 50, 50};
-            }
-        }
-    }
-    block->y = currentY;
-
-    for (SHORT i = 0; i < block->h; i++)
-    {
-        for (SHORT j = 0; j < block->w; j++)
-        {
-            // 忽略场景外的部分
-            if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
-                continue;
-
-            if (block->data[i][j])
-                scene->buffer[i + block->y][j + block->x].ch = getBlockCh(block->data[i][j]);
-
-            if (vtSupported)
-            {
-                if (block->data[i][j])
-                    scene->buffer[i + block->y][j + block->x].color.rgb = getBlockColor(block->data[i][j]);
-            }
-        }
-    }
-}
-
-void setSceneNextBlock(Scene *scene, Object *block)
-{
-    for (SHORT i = 0; i < block->h; i++)
-    {
-        for (SHORT j = 0; j < block->w; j++)
-        {
-            // 忽略场景外的部分
-            if (i + block->y < 0 || i + block->y >= scene->h || j + block->x < 0 || j + block->x >= scene->w)
-                continue;
-
-            scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
-
-            if (vtSupported)
-            {
-                if (block->data[i][j])
-                    scene->buffer[i + block->y][j + block->x].color.rgb = getBlockColor(block->data[i][j]);
+                    scene->buffer[i + block->y][j + block->x].color.rgb = block->data[i][j] != 8 || currentTime - lastTime > 50 ? getBlockColor(block->data[i][j], scene) : Rgb(0, 0, 0);
             }
         }
     }

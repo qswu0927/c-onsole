@@ -5,6 +5,8 @@
 #include "map.h"
 #include "block.h"
 
+#define CONFILE "config.dat"
+
 typedef struct
 {
     RenderMode mode;
@@ -147,18 +149,18 @@ void setMessage(void)
 
 void quit(void)
 {
-    saveConfig("config.dat", &config, sizeof(Config));
+    saveConfig(CONFILE, &config, sizeof(Config));
 }
 
 int main(void)
 {
-    loadConfig("config.dat", &config, sizeof(Config));
+    loadConfig(CONFILE, &config, sizeof(Config));
     mute = &config.mute;
     mouseInput = &config.mouseInput;
     setupConsole((w + 12) * 2, h, L"Tetris");
     setupClose(quit);
-
     scene = newScene(w + 12, h);
+    scene->mode = config.mode;
 START:
     isPaused = false;
     if (map)
@@ -212,8 +214,8 @@ START:
         }
 
         setSceneMap(scene, map);
-        setSceneBlock(scene, block, map);
-        setSceneNextBlock(scene, nextBlock);
+        setSceneBlock(scene, block, map, true);
+        setSceneBlock(scene, nextBlock, map, false);
 
         if (score > config.maxScore)
             config.maxScore = score;
