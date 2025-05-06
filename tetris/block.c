@@ -245,7 +245,7 @@ void updateBlock(Object *block, Object *map)
             block->status = 1;
             CreateThread(NULL, 0, clearLines, map, 0, NULL);
             // 结束游戏
-            if (block->y <= -block->h / 2)
+            if (!isBomb && block->y <= -block->h / 2)
             {
                 block->status = 2;
                 playSoundSeq(6, 220, 300, 100, 175, 500, 0);

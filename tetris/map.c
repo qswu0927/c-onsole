@@ -14,6 +14,10 @@ void updateMap(Object *map)
         {
             if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
                 map->data[i][j] = 1;
+            else if (i > map->h * 2 / 3)
+            {
+                map->data[i][j] = rand() % 3 == 0 ? rand() % 8 : 0;
+            }
             else
                 map->data[i][j] = 0;
         }
