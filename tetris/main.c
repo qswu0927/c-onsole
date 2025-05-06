@@ -9,12 +9,12 @@
 
 typedef enum
 {
-    START,
-    READY,
-    PAUSED,
-    OVER,
-    RESTART,
-    QUIT
+    S_START,
+    S_READY,
+    S_PAUSED,
+    S_OVER,
+    S_RESTART,
+    S_QUIT
 } Status;
 
 typedef struct
@@ -28,7 +28,7 @@ Config config = {.mode = RM_BG, .maxScore = 0, .mute = false, .mouseInput = fals
 
 SHORT w = 12, h = 22;
 COORD currentPos;
-Status status = START;
+Status status = S_START;
 
 Scene *scene = NULL;
 Object *map = NULL;
@@ -41,7 +41,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
 {
     if (vkCode == 'A' || vkCode == VK_LEFT)
     {
-        if (status == READY && !isCollided(block, map, -1, 0))
+        if (status == S_READY && !isCollided(block, map, -1, 0))
         {
             block->x -= 1;
             playSoundSeq(3, 800, 30, 0);
@@ -49,7 +49,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == 'D' || vkCode == VK_RIGHT)
     {
-        if (status == READY && !isCollided(block, map, 1, 0))
+        if (status == S_READY && !isCollided(block, map, 1, 0))
         {
             block->x += 1;
             playSoundSeq(3, 800, 30, 0);
@@ -57,12 +57,12 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == 'W' || vkCode == VK_UP || mState & RIGHTMOST_BUTTON_PRESSED)
     {
-        if (status == READY)
+        if (status == S_READY)
             rotateBlock(block, map);
     }
     else if (vkCode == 'S' || vkCode == VK_DOWN)
     {
-        if (status == READY && !isCollided(block, map, 0, 1))
+        if (status == S_READY && !isCollided(block, map, 0, 1))
         {
             block->y += 1;
             playSoundSeq(3, 800, 30, 0);
@@ -70,7 +70,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == VK_SPACE || mState & FROM_LEFT_1ST_BUTTON_PRESSED)
     {
-        while (status == READY && !isCollided(block, map, 0, 1))
+        while (status == S_READY && !isCollided(block, map, 0, 1))
             block->y += 1;
     }
     else if (vkCode == 'M')
@@ -81,16 +81,16 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     else if (vkCode == 'P')
     {
         if (block->status == 2)
-            status = RESTART;
+            status = S_RESTART;
         else
-            status = status == READY ? PAUSED : READY;
+            status = status == S_READY ? S_PAUSED : S_READY;
     }
     else if (vkCode == 'K')
         config.mute = !config.mute;
     else if (vkCode == 'L')
         config.mouseInput = !config.mouseInput;
     else if (vkCode == VK_ESCAPE)
-        status = QUIT;
+        status = S_QUIT;
 
     MOUSE_EVENT_RECORD mer = record->Event.MouseEvent;
     // 鼠标移动检测
@@ -104,7 +104,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         {
             lastPos = currentPos;
             int offset = currentPos.X > getBlockX(block) ? 1 : -1;
-            while (status == READY && !isCollided(block, map, offset, 0))
+            while (status == S_READY && !isCollided(block, map, offset, 0))
             {
                 if (currentPos.X == getBlockX(block))
                     break;
@@ -169,7 +169,7 @@ int main(void)
     scene = newScene(w + 12, h);
     scene->mode = config.mode;
 START:
-    status = START;
+    status = S_START;
     if (map)
         freeObject(&map);
     map = newObject(0, 0, w, h);
@@ -188,15 +188,15 @@ START:
                  523, 100, 20,
                  494, 100, 20,
                  440, 100, 20);
-    while (status != QUIT)
+    while (status != S_QUIT)
     {
         frameStart(&fr);
 
         if (block)
         {
-            if (block->status == 2)
-                status = OVER;
-            else if (block->status == 1)
+            if (block->status == B_OVER)
+                status = S_OVER;
+            else if (block->status == B_DOCKED)
                 freeObject(&block);
         }
 
@@ -209,7 +209,7 @@ START:
         }
 
         getInput(handleInputEvent);
-        if (status == RESTART)
+        if (status == S_RESTART)
             goto START;
 
         DWORD initMapExitCode;
@@ -219,20 +219,28 @@ START:
             {
                 CloseHandle(hInitMapThread);
                 hInitMapThread = NULL;
-                status = READY;
+                status = S_READY;
             }
         }
 
-        if (status == READY)
+        if (status == S_READY)
         {
+            updateMap(map);
             updateBlock(block, map);
         }
 
         setSceneMap(scene, map);
-        if (status != START)
+        if (status != S_START)
         {
             setSceneBlock(scene, block, map, true);
             setSceneBlock(scene, nextBlock, map, false);
+            // 渲染爆炸碎片
+            Object *tmp = map->next;
+            while (tmp)
+            {
+                setSceneBlock(scene, tmp, map, false);
+                tmp = tmp->next;
+            }
         }
 
         if (score > config.maxScore)

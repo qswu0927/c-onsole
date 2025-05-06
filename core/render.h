@@ -55,13 +55,14 @@ typedef struct
     Camera camera;
 } Scene;
 
-typedef struct
+typedef struct Object
 {
     SHORT x, y;
     SHORT w, h;
     SHORT vx, vy;
     CHAR status;
     CHAR **data;
+    struct Object *next;
 } Object;
 
 FrameRate newFrameRate(SHORT fps);

@@ -75,16 +75,14 @@ Rgb getBlockColor(SHORT index, Scene *scene)
 Object *newBlock(SHORT x, SHORT y)
 {
     SHORT index = rand() % (sizeof(TETROMINOS) / sizeof(TETROMINOS[0]));
-    // if (rand() % 100 > 50)
+    // if (rand() % 100 < 30)
     //     index = 7;
     Object *block = newObject(x, y, BLOCK_WIDTH, BLOCK_HEIGHT);
+    if (index == 7)
+        block->status = B_BOMB;
     for (int i = 0; i < BLOCK_HEIGHT; i++)
-    {
         for (int j = 0; j < BLOCK_WIDTH; j++)
-        {
             block->data[i][j] = TETROMINOS[index][i][j];
-        }
-    }
     // 随机旋转
     for (int i = 0; i < rand() % 4; i++)
         rotateObject(block);
@@ -96,15 +94,9 @@ Object *newBlock(SHORT x, SHORT y)
 SHORT getBlockX(Object *block)
 {
     for (int j = 0; j < block->w; j++)
-    {
         for (int i = 0; i < block->h; i++)
-        {
             if (block->data[i][j])
-            {
                 return j + block->x;
-            }
-        }
-    }
     return -1;
 }
 
@@ -189,6 +181,95 @@ void rotateBlock(Object *block, Object *map)
     playSoundSeq(6, 600, 30, 0, 800, 30, 0);
 }
 
+DWORD WINAPI explodeBlock(LPVOID lpParam)
+{
+    ExplodeParams *params = (ExplodeParams *)lpParam;
+    Object *block = params->block;
+    Object *map = params->map;
+    Object *frags = NULL;
+
+    for (SHORT i = 0; i < block->h; i++)
+    {
+        for (SHORT j = 0; j < block->w; j++)
+        {
+            if (block->data[i][j] == 0)
+                continue;
+            for (SHORT r = -2; r <= 2; r++)
+            {
+                for (SHORT c = -2; c <= 2; c++)
+                {
+                    SHORT r0 = block->y + i + r;
+                    SHORT c0 = block->x + j + c;
+                    if (r0 <= 0 || r0 >= map->h - 1 || c0 <= 0 || c0 >= map->w - 1 || map->data[r0][c0] == 0)
+                        continue;
+                    Object *frag = newObject(c0, r0, 1, 1);
+                    frag->data[0][0] = map->data[r0][c0];
+                    frag->vx = c == 0 ? -1 : c;
+                    frag->vy = -1;
+                    if (frags)
+                    {
+                        if (frags->next != NULL)
+                            frag->next = frags->next;
+                        frags->next = frag;
+                    }
+                    else
+                        frags = frag;
+                    map->data[r0][c0] = 0;
+                }
+            }
+        }
+    }
+    block->status = B_DOCKED;
+
+    playSoundSeq(10 * 3,
+                 // 中高频起始
+                 350, 30, 0,
+                 300, 30, 0,
+                 250, 30, 0,
+                 200, 30, 0,
+                 150, 30, 0,
+                 100, 30, 0,
+                 // 爆炸冲击波主体
+                 80, 100, 0, // 低频轰隆声
+                 60, 150, 0, // 更低的余震
+                 // 爆炸结束的"火花"声
+                 120, 40, 0,
+                 200, 30, 0);
+
+    while (frags)
+    {
+        Object *f = frags;
+        Object *fp = NULL;
+        while (f)
+        {
+            f->x += f->vx;
+            f->y += f->vy;
+            if (f->vx == 0 || f->x <= map->x || f->x >= map->x + map->w - 1 || f->y <= map->y || f->y >= map->y + map->h - 1 || map->data[f->y][f->x] > 0)
+            {
+                if (fp == NULL)
+                {
+                    frags = f->next;
+                    freeObject(&f);
+                    f = frags;
+                }
+                else
+                {
+                    fp->next = f->next;
+                    freeObject(&f);
+                    f = fp->next;
+                }
+                continue;
+            }
+            fp = f;
+            f = f->next;
+        }
+        map->next = frags;
+        Sleep(80);
+    }
+
+    return 0;
+}
+
 void updateBlock(Object *block, Object *map)
 {
     static clock_t lastTime = 0;
@@ -198,59 +279,41 @@ void updateBlock(Object *block, Object *map)
         lastTime = currentTime;
         if (isCollided(block, map, 0, 1))
         {
-            bool isBomb = false;
-            for (SHORT i = 0; i < block->h; i++)
+            // 炸弹
+            if (block->status == B_BOMB)
             {
-                for (SHORT j = 0; j < block->w; j++)
+                ExplodeParams *params = (ExplodeParams *)malloc(sizeof(SoundParams));
+                params->block = block;
+                params->map = map;
+                HANDLE hThread = CreateThread(NULL, 0, explodeBlock, params, 0, NULL);
+                if (hThread)
+                    CloseHandle(hThread);
+            }
+            else
+            {
+                for (SHORT i = 0; i < block->h; i++)
                 {
-                    if (block->data[i][j])
+                    for (SHORT j = 0; j < block->w; j++)
                     {
-                        // 炸弹
-                        if (block->data[i][j] == 8)
+                        if (block->data[i][j])
                         {
-                            if (!isBomb)
-                                isBomb = true;
-                            for (SHORT r = i - 2; r <= i + 2; r++)
-                            {
-                                for (SHORT c = j - 1; c <= j + 1; c++)
-                                {
-                                    if (block->y + r > 0 && block->y + r < map->h - 1 && block->x + c > 0 && block->x + c < map->w - 1)
-                                        map->data[block->y + r][block->x + c] = 0;
-                                }
-                            }
+                            //  固定方块
+                            if (block->y + i > 0 && block->y + i < map->h - 1 && block->x + j > 0 && block->x + j < map->w - 1)
+                                map->data[block->y + i][block->x + j] = block->data[i][j];
                         }
-                        //  固定方块
-                        else if (block->y + i > 0 && block->y + i < map->h - 1 && block->x + j > 0 && block->x + j < map->w - 1)
-                            map->data[block->y + i][block->x + j] = block->data[i][j];
                     }
                 }
-            }
-            if (isBomb)
-                playSoundSeq(10 * 3,
-                             // 中高频起始
-                             350, 30, 0,
-                             300, 30, 0,
-                             250, 30, 0,
-                             200, 30, 0,
-                             150, 30, 0,
-                             100, 30, 0,
-                             // 爆炸冲击波主体
-                             80, 100, 0, // 低频轰隆声
-                             60, 150, 0, // 更低的余震
-                             // 爆炸结束的"火花"声
-                             120, 40, 0,
-                             200, 30, 0);
-            else
                 playSoundSeq(3, 400, 50, 0);
-            block->status = 1;
-            HANDLE hThread = CreateThread(NULL, 0, clearLines, map, 0, NULL);
-            if (hThread)
-                CloseHandle(hThread);
-            // 结束游戏
-            if (!isBomb && block->y <= -block->h / 2)
-            {
-                block->status = 2;
-                playSoundSeq(6, 220, 300, 100, 175, 500, 0);
+                block->status = B_DOCKED;
+                HANDLE hThread = CreateThread(NULL, 0, clearLines, map, 0, NULL);
+                if (hThread)
+                    CloseHandle(hThread);
+                // 结束游戏
+                if (block->y <= -block->h / 2)
+                {
+                    block->status = B_OVER;
+                    playSoundSeq(6, 220, 300, 100, 175, 500, 0);
+                }
             }
         }
         else

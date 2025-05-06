@@ -208,6 +208,7 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
     obj->vx = 0;
     obj->vy = 0;
     obj->status = 0;
+    obj->next = NULL;
     obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
     for (int i = 0; i < h; i++)
     {

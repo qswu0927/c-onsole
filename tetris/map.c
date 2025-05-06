@@ -31,7 +31,7 @@ DWORD WINAPI initMap(LPVOID lpParam)
     {
         for (int j = 1; j < map->w - 1; j++)
         {
-            if (i > map->h * 2 / 3)
+            if (i > map->h * 3 / 4)
                 map->data[i][j] = rand() % 3 == 0 ? rand() % 8 : 0;
             else
                 map->data[i][j] = 0;
@@ -40,6 +40,28 @@ DWORD WINAPI initMap(LPVOID lpParam)
     }
 
     return 0;
+}
+
+// 添加底部障碍
+void addMapLine(Object *map)
+{
+    for (int i = 1; i < map->h - 2; i++)
+    {
+        for (int j = 1; j < map->w - 1; j++)
+        {
+            map->data[i][j] = map->data[i + 1][j];
+        }
+    }
+    for (int j = 1; j < map->w - 1; j++)
+    {
+        map->data[map->h - 2][j] = rand() % 3 == 0 ? rand() % 8 : 0;
+    }
+}
+
+void updateMap(Object *map)
+{
+    if (rand() % 200 == 0)
+        addMapLine(map);
 }
 
 wchar_t *getMapCh(Object *map, SHORT i, SHORT j, Scene *scene)
