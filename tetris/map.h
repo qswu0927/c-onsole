@@ -4,7 +4,7 @@
 
 extern int score;
 
-void updateMap(Object *map);
+DWORD WINAPI initMap(LPVOID lpParam);
 void setSceneMap(Scene *scene, Object *map);
 DWORD WINAPI clearLines(LPVOID lpParam);
 

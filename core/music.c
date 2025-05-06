@@ -49,10 +49,7 @@ void playSound(SoundParams *params)
     );
 
     if (hThread)
-    {
-        // 不关心线程句柄
         CloseHandle(hThread);
-    }
 }
 
 // 播放音效序列

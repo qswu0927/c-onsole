@@ -7,6 +7,16 @@
 
 #define CONFILE "config.dat"
 
+typedef enum
+{
+    START,
+    READY,
+    PAUSED,
+    OVER,
+    RESTART,
+    QUIT
+} Status;
+
 typedef struct
 {
     RenderMode mode;
@@ -18,9 +28,7 @@ Config config = {.mode = RM_BG, .maxScore = 0, .mute = false, .mouseInput = fals
 
 SHORT w = 12, h = 22;
 COORD currentPos;
-bool isPaused = false;
-bool isRestart = false;
-bool isQuit = false;
+Status status = START;
 
 Scene *scene = NULL;
 Object *map = NULL;
@@ -33,7 +41,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
 {
     if (vkCode == 'A' || vkCode == VK_LEFT)
     {
-        if (!isPaused && !isCollided(block, map, -1, 0))
+        if (status == READY && !isCollided(block, map, -1, 0))
         {
             block->x -= 1;
             playSoundSeq(3, 800, 30, 0);
@@ -41,7 +49,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == 'D' || vkCode == VK_RIGHT)
     {
-        if (!isPaused && !isCollided(block, map, 1, 0))
+        if (status == READY && !isCollided(block, map, 1, 0))
         {
             block->x += 1;
             playSoundSeq(3, 800, 30, 0);
@@ -49,12 +57,12 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == 'W' || vkCode == VK_UP || mState & RIGHTMOST_BUTTON_PRESSED)
     {
-        if (!isPaused)
+        if (status == READY)
             rotateBlock(block, map);
     }
     else if (vkCode == 'S' || vkCode == VK_DOWN)
     {
-        if (!isPaused && !isCollided(block, map, 0, 1))
+        if (status == READY && !isCollided(block, map, 0, 1))
         {
             block->y += 1;
             playSoundSeq(3, 800, 30, 0);
@@ -62,7 +70,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == VK_SPACE || mState & FROM_LEFT_1ST_BUTTON_PRESSED)
     {
-        while (!isPaused && !isCollided(block, map, 0, 1))
+        while (status == READY && !isCollided(block, map, 0, 1))
             block->y += 1;
     }
     else if (vkCode == 'M')
@@ -73,18 +81,16 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     else if (vkCode == 'P')
     {
         if (block->status == 2)
-            isRestart = true;
+            status = RESTART;
         else
-            isPaused = !isPaused;
+            status = status == READY ? PAUSED : READY;
     }
     else if (vkCode == 'K')
         config.mute = !config.mute;
     else if (vkCode == 'L')
         config.mouseInput = !config.mouseInput;
     else if (vkCode == VK_ESCAPE)
-    {
-        isQuit = true;
-    }
+        status = QUIT;
 
     MOUSE_EVENT_RECORD mer = record->Event.MouseEvent;
     // 鼠标移动检测
@@ -98,7 +104,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         {
             lastPos = currentPos;
             int offset = currentPos.X > getBlockX(block) ? 1 : -1;
-            while (!isPaused && !isCollided(block, map, offset, 0))
+            while (status == READY && !isCollided(block, map, offset, 0))
             {
                 if (currentPos.X == getBlockX(block))
                     break;
@@ -125,7 +131,8 @@ void setMessage(void)
         static SHORT count = 0;
         if (count++ > 10)
             count = 0;
-        setSceneStr(scene, w / 2 - 3, h / 3, count > 5 ? Rgb(200, 50, 0) : (Rgb){200, 200, 200, 200, 50, 0}, "😂游戏结束😂");
+        if (count > 5)
+            setSceneStr(scene, w / 2 - 2, h / 3, (Rgb){255, 255, 255, 200, 50, 0}, "游戏结束");
         setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
     }
     else
@@ -162,11 +169,11 @@ int main(void)
     scene = newScene(w + 12, h);
     scene->mode = config.mode;
 START:
-    isPaused = false;
+    status = START;
     if (map)
         freeObject(&map);
     map = newObject(0, 0, w, h);
-    updateMap(map);
+    HANDLE hInitMapThread = CreateThread(NULL, 0, initMap, map, 0, NULL);
     if (block)
         freeObject(&block);
     if (nextBlock)
@@ -181,14 +188,14 @@ START:
                  523, 100, 20,
                  494, 100, 20,
                  440, 100, 20);
-    while (!isQuit)
+    while (status != QUIT)
     {
         frameStart(&fr);
 
         if (block)
         {
             if (block->status == 2)
-                isPaused = true;
+                status = OVER;
             else if (block->status == 1)
                 freeObject(&block);
         }
@@ -202,20 +209,31 @@ START:
         }
 
         getInput(handleInputEvent);
-        if (isRestart)
-        {
-            isRestart = false;
+        if (status == RESTART)
             goto START;
+
+        DWORD initMapExitCode;
+        if (hInitMapThread && GetExitCodeThread(hInitMapThread, &initMapExitCode))
+        {
+            if (initMapExitCode != STILL_ACTIVE)
+            {
+                CloseHandle(hInitMapThread);
+                hInitMapThread = NULL;
+                status = READY;
+            }
         }
 
-        if (!isPaused)
+        if (status == READY)
         {
             updateBlock(block, map);
         }
 
         setSceneMap(scene, map);
-        setSceneBlock(scene, block, map, true);
-        setSceneBlock(scene, nextBlock, map, false);
+        if (status != START)
+        {
+            setSceneBlock(scene, block, map, true);
+            setSceneBlock(scene, nextBlock, map, false);
+        }
 
         if (score > config.maxScore)
             config.maxScore = score;

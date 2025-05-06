@@ -7,6 +7,7 @@
     "util.h": "c",
     "signal.h": "c",
     "time.h": "c",
-    "block.h": "c"
+    "block.h": "c",
+    "map.h": "c"
   }
 }

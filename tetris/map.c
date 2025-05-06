@@ -6,22 +6,40 @@
 
 int score = 0;
 
-void updateMap(Object *map)
+DWORD WINAPI initMap(LPVOID lpParam)
 {
+    Object *map = (Object *)lpParam;
     for (int i = 0; i < map->h; i++)
     {
         for (int j = 0; j < map->w; j++)
         {
             if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
                 map->data[i][j] = 1;
-            else if (i > map->h * 2 / 3)
-            {
-                map->data[i][j] = rand() % 3 == 0 ? rand() % 8 : 0;
-            }
             else
                 map->data[i][j] = 0;
         }
     }
+    for (int i = map->h - 2; i >= 1; i--)
+    {
+        for (int j = 1; j < map->w - 1; j++)
+        {
+            map->data[i][j] = rand() % 7 + 1;
+        }
+        Sleep(20);
+    }
+    for (int i = 1; i < map->h - 1; i++)
+    {
+        for (int j = 1; j < map->w - 1; j++)
+        {
+            if (i > map->h * 2 / 3)
+                map->data[i][j] = rand() % 3 == 0 ? rand() % 8 : 0;
+            else
+                map->data[i][j] = 0;
+        }
+        Sleep(20);
+    }
+
+    return 0;
 }
 
 wchar_t *getMapCh(Object *map, SHORT i, SHORT j, Scene *scene)
