@@ -3,6 +3,11 @@
 #include <stdbool.h>
 #include "../core/render.h"
 
+#define BLOCK_HEIGHT 4
+#define BLOCK_WIDTH 4
+
+extern const SHORT NUM_TETROMINOS;
+
 typedef enum
 {
     B_NONE,

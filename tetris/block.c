@@ -5,9 +5,6 @@
 #include "../core/music.h"
 #include "map.h"
 
-#define BLOCK_HEIGHT 4
-#define BLOCK_WIDTH 4
-
 // 基本方块
 const SHORT TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // I
@@ -23,9 +20,8 @@ const SHORT TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     // S
     {{0, 0, 0, 0}, {0, 6, 6, 0}, {6, 6, 0, 0}, {0, 0, 0, 0}},
     // Z
-    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}},
-    // 炸弹
-    {{0, 0, 0, 0}, {8, 0, 8, 0}, {0, 8, 0, 0}, {8, 0, 8, 0}}};
+    {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}}};
+const SHORT NUM_TETROMINOS = sizeof(TETROMINOS) / sizeof(TETROMINOS[0]);
 
 wchar_t *getBlockCh(SHORT index, Scene *scene)
 {
@@ -34,10 +30,9 @@ wchar_t *getBlockCh(SHORT index, Scene *scene)
 
     if (scene->mode == 1)
     {
-        wchar_t ch[] = L"哈啊哦嗯哇呀啦炸";
-
         if (index == 0)
             return _wcsdup(L"  ");
+        wchar_t ch[] = L"哈啊哦嗯哇呀啦炸";
         // 方式一
         wchar_t temp[] = {ch[index - 1], L'\0'};
         return _wcsdup(temp);
@@ -74,15 +69,14 @@ Rgb getBlockColor(SHORT index, Scene *scene)
 
 Object *newBlock(SHORT x, SHORT y)
 {
-    SHORT index = rand() % (sizeof(TETROMINOS) / sizeof(TETROMINOS[0]));
-    // if (rand() % 100 < 30)
-    //     index = 7;
+    SHORT index = rand() % NUM_TETROMINOS;
     Object *block = newObject(x, y, BLOCK_WIDTH, BLOCK_HEIGHT);
-    if (index == 7)
+    if (rand() % 10 == 0)
         block->status = B_BOMB;
     for (int i = 0; i < BLOCK_HEIGHT; i++)
         for (int j = 0; j < BLOCK_WIDTH; j++)
             block->data[i][j] = TETROMINOS[index][i][j];
+
     // 随机旋转
     for (int i = 0; i < rand() % 4; i++)
         rotateObject(block);
@@ -194,7 +188,7 @@ DWORD WINAPI explodeBlock(LPVOID lpParam)
         {
             if (block->data[i][j] == 0)
                 continue;
-            for (SHORT r = -2; r <= 2; r++)
+            for (SHORT r = -1; r <= 2; r++)
             {
                 for (SHORT c = -2; c <= 2; c++)
                 {
@@ -325,6 +319,11 @@ void updateBlock(Object *block, Object *map)
 
 void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
 {
+    static clock_t lastTime = 0;
+    clock_t currentTime = clock();
+    if (currentTime - lastTime > 200)
+        lastTime = currentTime;
+
     if (showShadow)
     {
         // 显示预期下落位置投影
@@ -345,17 +344,12 @@ void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
                 if (vtSupported)
                 {
                     if (block->data[i][j])
-                        scene->buffer[i + block->y][j + block->x].color.rgb = (Rgb){0, 0, 0, 50, 50, 50};
+                        scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? (Rgb){0, 0, 0, 50, 50, 50} : Rgbb(0, 0, 0);
                 }
             }
         }
         block->y = currentY;
     }
-
-    static clock_t lastTime = 0;
-    clock_t currentTime = clock();
-    if (currentTime - lastTime > 200)
-        lastTime = currentTime;
 
     for (SHORT i = 0; i < block->h; i++)
     {
@@ -366,12 +360,12 @@ void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
                 continue;
 
             if (block->data[i][j])
-                scene->buffer[i + block->y][j + block->x].ch = block->data[i][j] != 8 || currentTime - lastTime > 50 ? getBlockCh(block->data[i][j], scene) : _wcsdup(L"  ");
+                scene->buffer[i + block->y][j + block->x].ch = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockCh(block->status == B_BOMB ? 8 : block->data[i][j], scene) : _wcsdup(L"  ");
 
             if (vtSupported)
             {
                 if (block->data[i][j])
-                    scene->buffer[i + block->y][j + block->x].color.rgb = block->data[i][j] != 8 || currentTime - lastTime > 50 ? getBlockColor(block->data[i][j], scene) : Rgb(0, 0, 0);
+                    scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockColor(block->status == B_BOMB ? 8 : block->data[i][j], scene) : Rgb(0, 0, 0);
             }
         }
     }

@@ -19,11 +19,12 @@ DWORD WINAPI initMap(LPVOID lpParam)
                 map->data[i][j] = 0;
         }
     }
+    // 过场动画，先由下往上填充，再由上往下清空
     for (int i = map->h - 2; i >= 1; i--)
     {
         for (int j = 1; j < map->w - 1; j++)
         {
-            map->data[i][j] = rand() % 7 + 1;
+            map->data[i][j] = rand() % NUM_TETROMINOS + 1;
         }
         Sleep(20);
     }
@@ -32,7 +33,7 @@ DWORD WINAPI initMap(LPVOID lpParam)
         for (int j = 1; j < map->w - 1; j++)
         {
             if (i > map->h * 3 / 4)
-                map->data[i][j] = rand() % 3 == 0 ? rand() % 8 : 0;
+                map->data[i][j] = rand() % 3 == 0 ? rand() % (NUM_TETROMINOS + 1) : 0;
             else
                 map->data[i][j] = 0;
         }
@@ -54,13 +55,13 @@ void addMapLine(Object *map)
     }
     for (int j = 1; j < map->w - 1; j++)
     {
-        map->data[map->h - 2][j] = rand() % 3 == 0 ? rand() % 8 : 0;
+        map->data[map->h - 2][j] = rand() % 3 == 0 ? rand() % (NUM_TETROMINOS + 1) : 0;
     }
 }
 
 void updateMap(Object *map)
 {
-    if (rand() % 200 == 0)
+    if (rand() % 400 == 0)
         addMapLine(map);
 }
 
