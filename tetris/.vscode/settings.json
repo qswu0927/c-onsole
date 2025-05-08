@@ -8,6 +8,12 @@
     "signal.h": "c",
     "time.h": "c",
     "block.h": "c",
-    "map.h": "c"
+    "map.h": "c",
+    "limits.h": "c",
+    "windows.h": "c",
+    "stdbool.h": "c"
+  },
+  "c": {
+    "github.copilot.enabled": false
   }
 }

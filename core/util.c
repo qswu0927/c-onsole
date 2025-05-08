@@ -106,3 +106,12 @@ void rotate90Clockwise(int rows, int cols, CHAR **mat, CHAR **result)
         }
     }
 }
+
+bool isWideChar(wchar_t ch)
+{
+    // 常见双宽度字符范围（CJK 字符、全角符号等）
+    return (ch >= 0x1100 && ch <= 0x11FF) || // Hangul Jamo
+           (ch >= 0x2E80 && ch <= 0x9FFF) || // CJK 统一表意文字
+           (ch >= 0xAC00 && ch <= 0xD7AF) || // Hangul Syllables
+           (ch >= 0xFF00 && ch <= 0xFFEF);   // 全角/半角字符块
+}

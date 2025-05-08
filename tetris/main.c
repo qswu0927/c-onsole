@@ -75,7 +75,19 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
     }
     else if (vkCode == 'M')
     {
-        scene->mode = (RenderMode)((scene->mode + 1) % RM_CNT);
+        if (!scene->mode)
+            scene->mode = RM_BG;
+        if (scene->mode & RM_V)
+        {
+            scene->mode ^= RM_V;
+            scene->mode <<= 1;
+            if (scene->mode >= RM_V)
+                scene->mode = RM_BG;
+        }
+        else
+        {
+            scene->mode |= RM_V;
+        }
         config.mode = scene->mode;
     }
     else if (vkCode == 'P')
@@ -119,10 +131,10 @@ void setMessage(void)
 {
     SHORT row = nextBlock->y + nextBlock->h + 1;
     SHORT col = w + 1;
-    setSceneStr(scene, col, 0, Rgb(120, 120, 120), "下一个:");
-    setSceneStr(scene, col, row++, Rgb(155, 155, 0), "得  分: %5d", score);
+    setSceneStr(scene, col, 0, Rgb(100, 100, 100), "下一个:");
+    setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", score);
     setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
-    setSceneStr(scene, col, row++, (Rgb){0, 0, 0, 100, 100, 100}, "输出模式: %d，按M切换", scene->mode);
+    setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: ASD|方向键");
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "旋转: W|上键");
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "速降: 空格键");
@@ -136,22 +148,22 @@ void setMessage(void)
         setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
     }
     else
-        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "暂停|继续: P键");
-    setSceneStr(scene, col, row++, Rgb(110, 110, 110), "退出: Esc键");
-    setSceneStr(scene, col, row++, Rgb(110, 110, 110), config.mute ? "打开音效: K键" : "关闭音效: K键");
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "暂停|继续: P键");
+    setSceneStr(scene, col, row++, Rgb(100, 100, 100), "退出: Esc键");
+    setSceneStr(scene, col, row++, Rgb(100, 100, 100), config.mute ? "打开音效: K键" : "关闭音效: K键");
     if (config.mouseInput)
     {
-        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "禁用鼠标控制: L键");
-        // setSceneStr(scene, col, row++, Rgb(79, 79, 79), "鼠标: %d,%d", currentPos.X, currentPos.Y);
-        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "速降: 鼠标左击");
-        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "旋转: 鼠标右击");
-        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "移动: 鼠标移动");
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "禁用鼠标控制: L键");
+        // setSceneStr(scene, col, row++, Rgb(80, 80, 80), "鼠标: %d,%d", currentPos.X, currentPos.Y);
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "速降: 鼠标左击");
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "旋转: 鼠标右击");
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "移动: 鼠标移动");
     }
     else
     {
-        setSceneStr(scene, col, row++, Rgb(110, 110, 110), "启用鼠标控制: L键");
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "启用鼠标控制: L键");
     }
-    setSceneStr(scene, col, row++, Rgb(79, 79, 79), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
+    setSceneStr(scene, col, row++, Rgb(80, 80, 80), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
 }
 
 void quit(void)
@@ -164,9 +176,9 @@ int main(void)
     loadConfig(CONFILE, &config, sizeof(Config));
     mute = &config.mute;
     mouseInput = &config.mouseInput;
-    setupConsole((w + 12) * 2, h, L"Tetris");
+    setupConsole((w + 15) * 2, h, L"Tetris");
     setupClose(quit);
-    scene = newScene(w + 12, h);
+    scene = newScene(w + 15, h);
     scene->mode = config.mode;
 START:
     status = S_START;

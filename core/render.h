@@ -1,6 +1,7 @@
 #ifndef RENDER_H
 #define RENDER_H
 #include <windows.h>
+#include <stdbool.h>
 
 #define Rgb(r, g, b) ((Rgb){r, g, b, 0, 0, 0})
 #define Rgbb(r, g, b) ((Rgb){0, 0, 0, r, g, b})
@@ -20,10 +21,10 @@ typedef struct
  */
 typedef enum
 {
-    RM_BG,
-    RM_CH,
-    RM_EM,
-    RM_CNT
+    RM_BG = 1,
+    RM_CH = 1 << 1,
+    RM_EM = 1 << 2,
+    RM_V = 1 << 3,
 } RenderMode;
 
 typedef struct
@@ -39,6 +40,7 @@ typedef struct
         WORD attr;
         Rgb rgb;
     } color;
+    bool attrSet;
 } Char;
 
 typedef struct
@@ -70,14 +72,13 @@ void frameStart(FrameRate *fr);
 void frameEnd(FrameRate *fr);
 void mixColor(Rgb *dest, Rgb *src, double alpha);
 void orColor(Rgb *dest, Rgb *src);
+void clearScene(Scene *scene);
 Scene *newScene(SHORT w, SHORT h);
-void renderSceneByBg(Scene *scene);
 void renderScene(Scene *scene);
 void freeScene(Scene **scenePtr);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
 void rotateObject(Object *obj);
 void freeObject(Object **objPtr);
-void printStr(SHORT x, SHORT y, WORD color, const char *format, ...);
 void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...);
 // int getKb(void);
 void getInput(InputCallback callback);

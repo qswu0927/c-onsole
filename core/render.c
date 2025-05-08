@@ -61,6 +61,38 @@ void orColor(Rgb *dest, Rgb *src)
     dest->bb |= src->bb;
 }
 
+WORD rgb2attr(Rgb rgb)
+{
+    SHORT threshold = 50;
+    SHORT threshold1 = 180;
+    SHORT threshold2 = 127;
+    WORD attr = 0;
+    if (rgb.r > threshold)
+        attr |= FOREGROUND_RED;
+    if (rgb.g > threshold)
+        attr |= FOREGROUND_GREEN;
+    if (rgb.b > threshold)
+        attr |= FOREGROUND_BLUE;
+    if (rgb.r > threshold1 && rgb.g > threshold1 && rgb.b > threshold1)
+        attr |= FOREGROUND_INTENSITY;
+    if (attr == 0 && rgb.r + rgb.g + rgb.b > threshold2)
+        attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+
+    WORD attrB = 0;
+    if (rgb.br > threshold)
+        attrB |= BACKGROUND_RED;
+    if (rgb.bg > threshold)
+        attrB |= BACKGROUND_GREEN;
+    if (rgb.bb > threshold)
+        attrB |= BACKGROUND_BLUE;
+    if (rgb.br > threshold1 && rgb.bg > threshold1 && rgb.bb > threshold1)
+        attrB |= BACKGROUND_INTENSITY;
+    if (attrB == 0 && rgb.br + rgb.bg + rgb.bb > threshold2)
+        attrB = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+
+    return attr | attrB;
+}
+
 void clearScene(Scene *scene)
 {
     for (int i = 0; i < scene->h; i++)
@@ -69,6 +101,7 @@ void clearScene(Scene *scene)
         {
             scene->buffer[i][j].ch = _wcsdup(L"  ");
             scene->buffer[i][j].color.rgb = (Rgb){0};
+            scene->buffer[i][j].attrSet = false;
         }
     }
 }
@@ -90,71 +123,94 @@ Scene *newScene(SHORT w, SHORT h)
 }
 
 /**
- * 使用背景色渲染场景
- * 因CHAR_INFO不支持大于两字节字符
+ * 渲染场景
+ * 使用WriteConsoleOutput整体输出
  */
-void renderSceneByBg(Scene *scene)
+void renderSceneC(Scene *scene)
 {
     SHORT wr = 2;
     COORD bufferSize = {wr * scene->camera.w, scene->camera.h};
     COORD bufferCoord = {0, 0};
     SMALL_RECT writeRegion = {0, 0, wr * scene->camera.w - 1, scene->camera.h - 1};
-    CHAR_INFO *charInfo = (CHAR_INFO *)malloc(wr * scene->camera.w * scene->camera.h * sizeof(CHAR_INFO));
 
-    for (int i = 0; i < scene->camera.h; i++)
+    CHAR_INFO *charInfo = (CHAR_INFO *)malloc(wr * scene->camera.w * scene->camera.h * sizeof(CHAR_INFO));
+    if (!charInfo)
+        return;
+
+    for (SHORT y = 0; y < scene->camera.h; y++)
     {
-        for (int j = 0; j < scene->camera.w; j++)
+        for (SHORT srcX = 0, x = 0; srcX < scene->camera.w; srcX++)
         {
-            for (int k = 0; k < wr; k++)
+            Char cha = scene->buffer[scene->camera.y + y][scene->camera.x + srcX];
+            for (SHORT i = 0; cha.ch[i] != L'\0'; i++)
             {
-                int index = wr * (i * scene->camera.w + j) + k;
-                charInfo[index].Char.AsciiChar = ' ';
-                charInfo[index].Attributes = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.attr;
+                SHORT index = y * wr * scene->w + x;
+                wchar_t ch = cha.ch[i];
+                if (isWideChar(ch) && x + 1 < wr * scene->w)
+                {
+                    // 双宽度字符，占用2个CHAR_INFO单元
+                    charInfo[index].Char.UnicodeChar = ch;
+                    charInfo[index].Attributes =
+                        COMMON_LVB_LEADING_BYTE | (cha.attrSet ? cha.color.attr : rgb2attr(cha.color.rgb));
+
+                    charInfo[index + 1].Char.UnicodeChar = L' '; // 占位
+                    charInfo[index + 1].Attributes =
+                        COMMON_LVB_TRAILING_BYTE;
+
+                    x += 2;
+                }
+                else
+                {
+                    // 单宽度字符
+                    charInfo[index].Char.UnicodeChar = ch;
+                    charInfo[index].Attributes =
+                        cha.attrSet ? cha.color.attr : rgb2attr(cha.color.rgb);
+                    x += 1;
+                }
             }
         }
     }
     WriteConsoleOutput(hStdOut, charInfo, bufferSize, bufferCoord, &writeRegion);
     free(charInfo);
+    clearScene(scene);
 }
 
 /**
  * 渲染场景
  * 支持emoji（使用虚拟终端序列，需要控制台支持，例如Windows Terminal）
  */
-void renderScene(Scene *scene)
+void renderSceneV(Scene *scene)
 {
-    // 如果不支持虚拟终端序列
-    if (!vtSupported)
-    {
-        renderSceneByBg(scene);
-        return;
-    }
-
     DWORD written;
     for (int i = 0; i < scene->camera.h; i++)
     {
         SetConsoleCursorPosition(hStdOut, (COORD){0, i});
         for (int j = 0; j < scene->camera.w; j++)
         {
-            Rgb rgb = scene->buffer[scene->camera.y + i][scene->camera.x + j].color.rgb;
+            Char cha = scene->buffer[scene->camera.y + i][scene->camera.x + j];
 
-            // 预分配静态缓冲区（避免每次循环分配）
-            static char colorSeq[64];
-
-            // 直接写入（避免snprintf开销）
-            int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
-                              rgb.r, rgb.g, rgb.b, rgb.br, rgb.bg, rgb.bb);
-            WriteConsoleA(hStdOut, colorSeq, len, &written, NULL);
+            if (vtSupported)
+            {
+                // 预分配静态缓冲区（避免每次循环分配）
+                static char colorSeq[64];
+                // 直接写入（避免snprintf开销）
+                int len = sprintf(colorSeq, "\x1b[38;2;%d;%d;%d;48;2;%d;%d;%dm",
+                                  cha.color.rgb.r, cha.color.rgb.g, cha.color.rgb.b, cha.color.rgb.br, cha.color.rgb.bg, cha.color.rgb.bb);
+                WriteConsoleA(hStdOut, colorSeq, len, &written, NULL);
+            }
+            else
+            {
+                // 回退到 16 色模式
+                SetConsoleTextAttribute(hStdOut, cha.attrSet ? cha.color.attr : rgb2attr(cha.color.rgb));
+            }
 #if true
             // 每个坐标按实际字符数进行处理
-            wchar_t *wstr = scene->buffer[scene->camera.y + i][scene->camera.x + j].ch;
-
-            if (wstr != NULL)
+            if (cha.ch != NULL)
             {
-                size_t length = wcslen(wstr);
+                size_t length = wcslen(cha.ch);
                 if (length > 0)
                 {
-                    WriteConsoleW(hStdOut, wstr, (DWORD)length, &written, NULL);
+                    WriteConsoleW(hStdOut, cha.ch, (DWORD)length, &written, NULL);
                 }
             }
             else
@@ -165,13 +221,24 @@ void renderScene(Scene *scene)
             }
 #else
             // 每个坐标统一按两个字符数进行处理
-            WriteConsoleW(hStdOut, scene->buffer[scene->camera.y + i][scene->camera.x + j].ch, 2, &written, NULL);
+            WriteConsoleW(hStdOut, cha.ch, 2, &written, NULL);
 #endif
         }
     }
     // 重置颜色
-    WriteConsoleA(hStdOut, "\x1b[0m", 4, &written, NULL);
+    if (vtSupported)
+        WriteConsoleA(hStdOut, "\x1b[0m", 4, &written, NULL);
     clearScene(scene);
+}
+
+void renderScene(Scene *scene)
+{
+    if (scene->mode & RM_V)
+    {
+        renderSceneV(scene);
+        return;
+    }
+    renderSceneC(scene);
 }
 
 void freeScene(Scene **scenePtr)
@@ -261,54 +328,6 @@ void freeObject(Object **objPtr)
     free(obj);
     // 通过双重指针参数置空调用方的指针
     *objPtr = NULL;
-}
-
-void printStr(SHORT x, SHORT y, WORD color, const char *format, ...)
-{
-    // 设置光标位置
-    SetConsoleCursorPosition(hStdOut, (COORD){x, y});
-
-    // 设置文本颜色
-    SetConsoleTextAttribute(hStdOut, color);
-
-    // 使用可变参数列表来格式化字符串
-    va_list args;
-    va_start(args, format);
-
-    // 动态分配缓冲区
-    int bufferSize = _vscprintf(format, args) + 1;
-    char *buffer = (char *)malloc(bufferSize * sizeof(char));
-    if (buffer == NULL)
-    {
-        fprintf(stderr, "Memory allocation failed\n");
-        va_end(args);
-        return;
-    }
-
-    // 格式化字符串到动态分配的缓冲区
-    vsnprintf(buffer, bufferSize, format, args);
-
-    // 输出格式化后的字符串
-    printf("%s", buffer);
-
-    // 获取控制台宽度
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(hStdOut, &csbi);
-    SHORT consoleWidth = csbi.dwSize.X;
-
-    // 计算剩余宽度并填充空白字符
-    int remainingWidth = consoleWidth - (x + strlen(buffer));
-    for (int i = 0; i < remainingWidth; i++)
-        printf(" ");
-
-    // 释放动态分配的内存
-    free(buffer);
-
-    // 恢复默认文本颜色
-    SetConsoleTextAttribute(hStdOut, 7);
-
-    // 结束可变参数列表
-    va_end(args);
 }
 
 void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...)

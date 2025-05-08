@@ -1,5 +1,6 @@
 #include "block.h"
 #include <time.h>
+#include <limits.h>
 #include "../core/util.h"
 #include "../core/console.h"
 #include "../core/music.h"
@@ -23,12 +24,15 @@ const SHORT TETROMINOS[][BLOCK_HEIGHT][BLOCK_WIDTH] = {
     {{0, 0, 0, 0}, {7, 7, 0, 0}, {0, 7, 7, 0}, {0, 0, 0, 0}}};
 const SHORT NUM_TETROMINOS = sizeof(TETROMINOS) / sizeof(TETROMINOS[0]);
 
+// 记录最近方块锚定高度
+SHORT lastDockH = SHRT_MAX;
+
 wchar_t *getBlockCh(SHORT index, Scene *scene)
 {
-    if (scene->mode == 0)
+    if (scene->mode & RM_BG)
         return _wcsdup(L"  ");
 
-    if (scene->mode == 1)
+    if (scene->mode & RM_CH)
     {
         if (index == 0)
             return _wcsdup(L"  ");
@@ -62,7 +66,7 @@ Rgb getBlockColor(SHORT index, Scene *scene)
         {0, 0, 0, 250, 128, 114}, // 鲑鱼红
         {0, 0, 0, 147, 112, 219}, // 藤萝紫
         {0, 0, 0, 255, 0, 0}};    // 炸弹红
-    if (scene->mode == 0)
+    if (scene->mode & RM_BG)
         return rgbs[index];
     return Rgb(rgbs[index].br, rgbs[index].bg, rgbs[index].bb);
 }
@@ -71,7 +75,9 @@ Object *newBlock(SHORT x, SHORT y)
 {
     SHORT index = rand() % NUM_TETROMINOS;
     Object *block = newObject(x, y, BLOCK_WIDTH, BLOCK_HEIGHT);
-    if (rand() % 10 == 0)
+    // 越接近顶部，炸弹刷新概率越高
+    if (rand() % (lastDockH > 12 ? 12 : (lastDockH < 3 ? 3 : lastDockH)) ==
+        0)
         block->status = B_BOMB;
     for (int i = 0; i < BLOCK_HEIGHT; i++)
         for (int j = 0; j < BLOCK_WIDTH; j++)
@@ -199,7 +205,7 @@ DWORD WINAPI explodeBlock(LPVOID lpParam)
                     Object *frag = newObject(c0, r0, 1, 1);
                     frag->data[0][0] = map->data[r0][c0];
                     frag->vx = c == 0 ? -1 : c;
-                    frag->vy = -1;
+                    frag->vy = r - 3;
                     if (frags)
                     {
                         if (frags->next != NULL)
@@ -214,6 +220,7 @@ DWORD WINAPI explodeBlock(LPVOID lpParam)
         }
     }
     block->status = B_DOCKED;
+    lastDockH = block->y;
 
     playSoundSeq(10 * 3,
                  // 中高频起始
@@ -299,6 +306,7 @@ void updateBlock(Object *block, Object *map)
                 }
                 playSoundSeq(3, 400, 50, 0);
                 block->status = B_DOCKED;
+                lastDockH = block->y;
                 HANDLE hThread = CreateThread(NULL, 0, clearLines, map, 0, NULL);
                 if (hThread)
                     CloseHandle(hThread);
@@ -341,11 +349,8 @@ void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
                 if (block->data[i][j])
                     scene->buffer[i + block->y][j + block->x].ch = _wcsdup(L"  ");
 
-                if (vtSupported)
-                {
-                    if (block->data[i][j])
-                        scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? (Rgb){0, 0, 0, 50, 50, 50} : Rgbb(0, 0, 0);
-                }
+                if (block->data[i][j])
+                    scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? (Rgb){0, 0, 0, 50, 50, 50} : Rgbb(0, 0, 0);
             }
         }
         block->y = currentY;
@@ -362,11 +367,8 @@ void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
             if (block->data[i][j])
                 scene->buffer[i + block->y][j + block->x].ch = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockCh(block->status == B_BOMB ? 8 : block->data[i][j], scene) : _wcsdup(L"  ");
 
-            if (vtSupported)
-            {
-                if (block->data[i][j])
-                    scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockColor(block->status == B_BOMB ? 8 : block->data[i][j], scene) : Rgb(0, 0, 0);
-            }
+            if (block->data[i][j])
+                scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockColor(block->status == B_BOMB ? 8 : block->data[i][j], scene) : Rgb(0, 0, 0);
         }
     }
 }

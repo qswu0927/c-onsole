@@ -2,6 +2,7 @@
 #define UTIL_H
 #include <stdio.h>
 #include <windows.h>
+#include <stdbool.h>
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0]))
 
@@ -34,5 +35,6 @@ void loadConfig(const char *filename, void *config, size_t size);
 void saveConfig(const char *filename, void *config, size_t size);
 void shuffle(int arr[], int n);
 void rotate90Clockwise(int rows, int cols, CHAR **mat, CHAR **result);
+bool isWideChar(wchar_t ch);
 
 #endif

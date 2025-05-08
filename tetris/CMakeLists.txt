@@ -5,6 +5,9 @@ project(tetris C)  # 显式声明为 C 项目
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+# 开启UNICODE
+add_definitions(-DUNICODE -D_UNICODE)
+
 # 设置编译器选项
 if(MSVC)
     # MSVC编译器选项

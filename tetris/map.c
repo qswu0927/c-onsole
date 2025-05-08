@@ -93,14 +93,7 @@ void setSceneMap(Scene *scene, Object *map)
         {
             scene->buffer[i + map->y][j + map->x].ch = getMapCh(map, i, j, scene);
 
-            if (vtSupported)
-            {
-                scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(map, i, j, scene);
-            }
-            else
-            {
-                // todo
-            }
+            scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(map, i, j, scene);
         }
     }
 }
