@@ -26,6 +26,7 @@ typedef struct
 } Config;
 Config config = {.mode = RM_BG, .maxScore = 0, .mute = false, .mouseInput = false};
 
+FrameRate fr;
 SHORT w = 12, h = 22;
 COORD currentPos;
 Status status = S_START;
@@ -34,8 +35,6 @@ Scene *scene = NULL;
 Object *map = NULL;
 Object *block = NULL;
 Object *nextBlock = NULL;
-
-FrameRate fr;
 
 void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
 {

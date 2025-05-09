@@ -11,7 +11,7 @@ Food *newFood(SHORT maxLen)
     return food;
 }
 
-void updateFood(Food *food, Snake **snakes, u_char snakeCount, Object *map)
+void updateFood(Food *food, Snake **snakes, SHORT snakeCount, Object *map)
 {
     if (listLen(food->first) >= food->maxLen)
         return;
@@ -47,80 +47,81 @@ void updateFood(Food *food, Snake **snakes, u_char snakeCount, Object *map)
 
 wchar_t *getFoodCh(Scene *scene, SHORT data)
 {
-    if (scene->mode == RM_BG)
-        return L"  ";
-    if (scene->mode == RM_CH)
+    if (scene->mode & RM_BG)
+        return _wcsdup(L"  ");
+    if (scene->mode & RM_CH)
     {
         switch (data)
         {
         case 0:
-            return L"鸟";
+            return _wcsdup(L"鸟");
         case 1:
-            return L"蛙";
+            return _wcsdup(L"蛙");
         case 2:
-            return L"鱼";
+            return _wcsdup(L"鱼");
         default:
-            return L"鼠";
+            return _wcsdup(L"鼠");
         }
     }
     switch (data)
     {
     case 0:
-        return L"🍎";
+        return _wcsdup(L"🍎");
     case 1:
-        return L"🍖";
+        return _wcsdup(L"🍖");
     case 2:
-        return L"🍉";
+        return _wcsdup(L"🍉");
     default:
-        return L"🍄";
+        return _wcsdup(L"🍄");
     }
 }
 
-RGBColor getFoodRgb(Scene *scene, SHORT data)
+Rgb getFoodRgb(Scene *scene, SHORT data)
 {
-    if (scene->mode == RM_BG)
+    if (scene->mode & RM_BG)
     {
         switch (data)
         {
         case 0:
-            return (RGBColor){0, 0, 0, 255, 165, 0};
+            return (Rgb){0, 0, 0, 255, 165, 0};
         case 1:
-            return (RGBColor){0, 0, 0, 0, 128, 0};
+            return (Rgb){0, 0, 0, 0, 128, 0};
         case 2:
-            return (RGBColor){0, 0, 0, 0, 191, 255};
+            return (Rgb){0, 0, 0, 0, 191, 255};
         default:
-            return (RGBColor){0, 0, 0, 211, 211, 211};
+            return (Rgb){0, 0, 0, 211, 211, 211};
         }
     }
-    if (scene->mode == RM_CH)
+    if (scene->mode & RM_CH)
     {
         switch (data)
         {
         case 0:
-            return (RGBColor){147, 112, 219, 0, 0, 0};
+            return (Rgb){147, 112, 219, 0, 0, 0};
         case 1:
-            return (RGBColor){0, 128, 0, 0, 0, 0};
+            return (Rgb){0, 128, 0, 0, 0, 0};
         case 2:
-            return (RGBColor){0, 191, 255, 0, 0, 0};
+            return (Rgb){0, 191, 255, 0, 0, 0};
         default:
-            return (RGBColor){190, 190, 190, 0, 0, 0};
+            return (Rgb){190, 190, 190, 0, 0, 0};
         }
     }
-    return (RGBColor){255, 255, 255, 0, 0, 0};
+    return (Rgb){255, 255, 255, 0, 0, 0};
 }
 
-void updateFoodToScene(Scene *scene, Food *food)
+void setSceneFood(Scene *scene, Food *food)
 {
     for (Node *node = food->first; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getFoodCh(scene, node->data);
-        if (vtSupported)
+        if (scene->mode & RM_V)
         {
             scene->buffer[node->y][node->x].color.rgb = getFoodRgb(scene, node->data);
         }
         else
         {
-            scene->buffer[node->y][node->x].color.attr = scene->mode == RM_BG ? BACKGROUND_RED : 0;
+            scene->buffer[node->y][node->x].attrSet = true;
+            scene->buffer[node->y][node->x].color.attr = scene->mode & RM_BG ? BACKGROUND_RED : 0;
         }
     }
 }

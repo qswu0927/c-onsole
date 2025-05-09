@@ -95,10 +95,18 @@ WORD rgb2attr(Rgb rgb)
 
 void clearScene(Scene *scene)
 {
-    for (int i = 0; i < scene->h; i++)
+    // clearSceneP(scene, 0, 0, scene->w, scene->h);
+    clearSceneP(scene, scene->camera.x, scene->camera.y, scene->camera.w, scene->camera.h);
+}
+
+void clearSceneP(Scene *scene, SHORT x, SHORT y, SHORT w, SHORT h)
+{
+    for (SHORT i = y; i < y + h && i < scene->h; i++)
     {
-        for (int j = 0; j < scene->w; j++)
+        for (SHORT j = x; j < x + w && j < scene->w; j++)
         {
+            if (scene->buffer[i][j].ch != NULL)
+                free(scene->buffer[i][j].ch);
             scene->buffer[i][j].ch = _wcsdup(L"  ");
             scene->buffer[i][j].color.rgb = (Rgb){0};
             scene->buffer[i][j].attrSet = false;
@@ -114,9 +122,9 @@ Scene *newScene(SHORT w, SHORT h)
     scene->mode = RM_BG;
     scene->camera = (Camera){0, 0, w, h};
     scene->buffer = (Char **)malloc(scene->h * sizeof(Char *));
-    for (int i = 0; i < scene->h; i++)
+    for (SHORT i = 0; i < scene->h; i++)
     {
-        scene->buffer[i] = (Char *)malloc(scene->w * sizeof(Char));
+        scene->buffer[i] = (Char *)calloc(scene->w, sizeof(Char));
     }
     clearScene(scene);
     return scene;
@@ -144,9 +152,9 @@ void renderSceneC(Scene *scene)
             Char cha = scene->buffer[scene->camera.y + y][scene->camera.x + srcX];
             for (SHORT i = 0; cha.ch[i] != L'\0'; i++)
             {
-                SHORT index = y * wr * scene->w + x;
+                SHORT index = y * wr * scene->camera.w + x;
                 wchar_t ch = cha.ch[i];
-                if (isWideChar(ch) && x + 1 < wr * scene->w)
+                if (isWideChar(ch))
                 {
                     // 双宽度字符，占用2个CHAR_INFO单元
                     charInfo[index].Char.UnicodeChar = ch;
@@ -182,10 +190,10 @@ void renderSceneC(Scene *scene)
 void renderSceneV(Scene *scene)
 {
     DWORD written;
-    for (int i = 0; i < scene->camera.h; i++)
+    for (SHORT i = 0; i < scene->camera.h; i++)
     {
         SetConsoleCursorPosition(hStdOut, (COORD){0, i});
-        for (int j = 0; j < scene->camera.w; j++)
+        for (SHORT j = 0; j < scene->camera.w; j++)
         {
             Char cha = scene->buffer[scene->camera.y + i][scene->camera.x + j];
 
@@ -277,7 +285,7 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
     obj->status = 0;
     obj->next = NULL;
     obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
-    for (int i = 0; i < h; i++)
+    for (SHORT i = 0; i < h; i++)
     {
         obj->data[i] = (CHAR *)malloc(obj->w * sizeof(CHAR));
     }
@@ -289,7 +297,7 @@ void rotateObject(Object *obj)
     SHORT w = obj->w;
     SHORT h = obj->h;
     CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
-    for (int i = 0; i < w; i++)
+    for (SHORT i = 0; i < w; i++)
     {
         rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
     }
@@ -297,7 +305,7 @@ void rotateObject(Object *obj)
     rotate90Clockwise(h, w, obj->data, rotatedData);
 
     // 释放原数据
-    for (int i = 0; i < h; i++)
+    for (SHORT i = 0; i < h; i++)
     {
         free(obj->data[i]);
     }
@@ -435,14 +443,12 @@ void getInput(InputCallback callback)
     DWORD cNumRead;
 
     // 检查输入（非阻塞）
-    if (!PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead))
-        return;
-
-    if (cNumRead == 0)
+    if (!PeekConsoleInput(hStdIn, irInBuf, 128, &cNumRead) || cNumRead == 0)
         return;
 
     // 读取输入
-    ReadConsoleInput(hStdIn, irInBuf, 128, &cNumRead);
+    if (!ReadConsoleInput(hStdIn, irInBuf, 1 /*只读取1个事件，剩下的仍然留在缓冲区*/, &cNumRead))
+        return;
 
     // 遍历所有输入事件，触发回调
     for (DWORD i = 0; i < cNumRead; i++)
@@ -459,7 +465,7 @@ void getInput(InputCallback callback)
             break;
         // 鼠标事件
         case MOUSE_EVENT:
-            if (*mouseInput)
+            if (mouseInput && *mouseInput)
             {
                 MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
                 callback(&irInBuf[i], 0, mer.dwButtonState);

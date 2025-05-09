@@ -2,7 +2,7 @@
 #define MAP_H
 #include "../core/render.h"
 
-void updateMap(Object *map);
-void updateMapToScene(Scene *scene, Object *obj);
+void initMap(Object *map);
+void setSceneMap(Scene *scene, Object *map);
 
 #endif

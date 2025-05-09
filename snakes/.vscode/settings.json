@@ -16,6 +16,8 @@
     "food.h": "c",
     "time.h": "c",
     "console.h": "c",
-    "signal.h": "c"
+    "signal.h": "c",
+    "map.h": "c",
+    "snake.h": "c"
   }
 }

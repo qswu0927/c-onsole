@@ -7,7 +7,7 @@ HANDLE hStdOut = NULL;
 HANDLE hStdIn = NULL;
 HWND hWnd = NULL;
 bool vtSupported = false;
-bool *mouseInput = false;
+bool *mouseInput = NULL;
 
 static QuitFunc quitFunc = NULL;
 

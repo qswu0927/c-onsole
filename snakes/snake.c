@@ -1,6 +1,7 @@
 #include "snake.h"
 #include <stdbool.h>
 #include "../core/console.h"
+#include "../core/music.h"
 #include "food.h"
 
 Snake *newSnake(SHORT x, SHORT y)
@@ -25,7 +26,7 @@ void startSnake(void *context)
     snake->dir = DIR_RIGHT;
 }
 
-void autoDir(Snake **snakes, u_char snakeCount, u_char index, Object *map)
+void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
 {
     Node *neckNode = snakes[index]->tail;
     while (neckNode->next != NULL && neckNode->next->next != NULL)
@@ -44,7 +45,7 @@ void autoDir(Snake **snakes, u_char snakeCount, u_char index, Object *map)
     // 大概率保持当前方向
     shuffle(dirs, rand() % 10 == 0 ? 3 : 2);
 
-    for (int i = 2; i >= 0; i--)
+    for (SHORT i = 2; i >= 0; i--)
     {
         dir = dirs[i];
 
@@ -77,7 +78,7 @@ void autoDir(Snake **snakes, u_char snakeCount, u_char index, Object *map)
             continue;
 
         // 判断撞到其他蛇
-        for (int j = 0; j < snakeCount; j++)
+        for (SHORT j = 0; j < snakeCount; j++)
         {
             if (j == index)
                 continue;
@@ -100,15 +101,19 @@ void autoDir(Snake **snakes, u_char snakeCount, u_char index, Object *map)
     snakes[index]->dir = dir;
 }
 
-void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Object *map)
+void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Object *map)
 {
-    if (snakes[index]->tick++ < 12 / snakes[index]->speed)
+    static Direction lastDir = DIR_NONE;
+    // 方向变了，需要立即更新
+    if (snakes[index]->dir == lastDir && snakes[index]->tick++ < 12 / snakes[index]->speed)
         return;
     snakes[index]->tick = 0;
+    if (snakes[index]->npc == false)
+        lastDir = snakes[index]->dir;
 
     if (!snakes[index]->alive)
         return;
-    // if (snakes[index]->npc)
+    if (snakes[index]->npc)
     {
         autoDir(snakes, snakeCount, index, map);
     }
@@ -140,9 +145,7 @@ void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Ob
     if (eat >= 0)
     {
         snakes[index]->score++;
-        // 播放音效
-        // Beep(600, 5);
-        Beep(400 + eat * 200, 5);
+        playSoundSeq(3, 400 + eat * 200, 5, 0);
         Node *newNode = (Node *)malloc(sizeof(Node));
         newNode->data = eat;
         // 新节点位置是原头部位置
@@ -174,7 +177,7 @@ void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Ob
         }
 
         // 判断撞到其他蛇
-        for (int j = 0; j < snakeCount; j++)
+        for (SHORT j = 0; j < snakeCount; j++)
         {
             if (j == index)
                 continue;
@@ -205,66 +208,48 @@ void updateSnake(Snake **snakes, u_char snakeCount, u_char index, Food *food, Ob
         }
         else
         {
-            Beep(snakes[index]->npc ? 300 : 350, 100);
+            playSoundSeq(3, snakes[index]->npc ? 300 : 350, 100, 0);
         }
     }
 }
 
 wchar_t *getHeadCh(Scene *scene)
 {
-    if (scene->mode == RM_BG)
-        return L"  ";
-    if (scene->mode == RM_CH)
-        return L"  ";
-    return L"🤢";
+    if (scene->mode & RM_BG)
+        return _wcsdup(L"  ");
+    if (scene->mode & RM_CH)
+        return _wcsdup(L"  ");
+    return _wcsdup(L"🤢");
 }
 
-void updateSnakeToScene(Scene *scene, Snake *snake)
+void setSceneSnake(Scene *scene, Snake *snake)
 {
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = node->next == NULL ? getHeadCh(scene) : getFoodCh(scene, node->data);
 
-        if (vtSupported)
+        if (scene->mode & RM_V)
         {
-            RGBColor color = getFoodRgb(scene, node->data);
+            Rgb color = getFoodRgb(scene, node->data);
             // 蛇身背景
             if (snake->npc)
                 color.br |= 0x99;
             else
                 color.bg |= 0xaa;
-            scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode == RM_EM ? (RGBColor){0} : (RGBColor){0, 0, 0, 255, snake->npc ? 100 : 255, 0}) : color;
+            scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode & RM_EM ? (Rgb){0} : (Rgb){0, 0, 0, 255, snake->npc ? 100 : 255, 0}) : color;
         }
         else
         {
-            scene->buffer[node->y][node->x].color.attr = node->next == NULL ? (scene->mode == RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
-        }
-
-        // 摄像机跟随主玩家
-        // if (!snake->npc && node->next == NULL)
-        // 摄像机跟随存活者
-        if (snake->alive && node->next == NULL)
-        {
-            scene->camera.x = node->x - scene->camera.w / 2;
-            scene->camera.y = node->y - scene->camera.h / 2;
-
-            // 限位
-            if (scene->camera.x < 0)
-                scene->camera.x = 0;
-            if (scene->camera.y < 0)
-                scene->camera.y = 0;
-            if (scene->camera.x + scene->camera.w > scene->w)
-                scene->camera.x = scene->w - scene->camera.w;
-            if (scene->camera.y + scene->camera.h > scene->h)
-                scene->camera.y = scene->h - scene->camera.h;
+            scene->buffer[node->y][node->x].attrSet = true;
+            scene->buffer[node->y][node->x].color.attr = node->next == NULL ? (scene->mode & RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
         }
     }
 }
 
-u_char getAliveCount(Snake **snakes, u_char snakeCount)
+SHORT getAliveCount(Snake **snakes, SHORT snakeCount)
 {
-    u_char count = 0;
-    for (int i = 0; i < snakeCount; i++)
+    SHORT count = 0;
+    for (SHORT i = 0; i < snakeCount; i++)
     {
         if (snakes[i]->alive)
             count++;

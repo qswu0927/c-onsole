@@ -1,7 +1,7 @@
 #include "music.h"
 #include <windows.h>
 
-bool *mute = false;
+bool *mute = NULL;
 
 DWORD WINAPI play8BitSound(LPVOID lpParam)
 {
@@ -13,7 +13,7 @@ DWORD WINAPI play8BitSound(LPVOID lpParam)
         int f = params->data[i++];
         int d = params->data[i++];
         int p = params->data[i++];
-        if (*mute)
+        if (mute && *mute)
             Sleep(d);
         else
             Beep(f, d);

@@ -3,11 +3,11 @@
 #include "../core/util.h"
 #include "../core/console.h"
 
-void updateMap(Object *map)
+void initMap(Object *map)
 {
-    for (int i = 0; i < map->h; i++)
+    for (SHORT i = 0; i < map->h; i++)
     {
-        for (int j = 0; j < map->w; j++)
+        for (SHORT j = 0; j < map->w; j++)
         {
             if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
                 map->data[i][j] = 1;
@@ -20,13 +20,14 @@ void updateMap(Object *map)
 wchar_t *getMapCh(RenderMode mode, CHAR data)
 {
     if (data == 0)
-        return L"  ";
-    if (mode == RM_BG)
-        return L"  ";
-    if (mode == RM_CH)
-        return L"墙";
-    return L"🚧";
+        return _wcsdup(L"  ");
+    if (mode & RM_BG)
+        return _wcsdup(L"  ");
+    if (mode & RM_CH)
+        return _wcsdup(L"墙");
+    return _wcsdup(L"🚧");
 }
+
 WORD getMapAttr(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
     // 深色模式
@@ -35,40 +36,41 @@ WORD getMapAttr(Scene *scene, CHAR data, SHORT i, SHORT j)
     // WORD colors[] = {0x70, 0xf0};
     if (data == 0)
         return colors[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(colors)];
-    if (scene->mode == RM_BG)
+    if (scene->mode & RM_BG)
         return BACKGROUND_BLUE;
     return 0x01;
 }
 
-RGBColor getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
+Rgb getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
-    RGBColor rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
+    Rgb rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
 
     if (data == 0)
         return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];
 
-    if (scene->mode == RM_BG)
-        return (RGBColor){0, 0, 0, 0, 0, 255};
+    if (scene->mode & RM_BG)
+        return (Rgb){0, 0, 0, 0, 0, 255};
 
-    // return (RGBColor){0, 0, 255, 0, 0, 0};
-    return (RGBColor){100, 100, 100, 0, 0, 255};
+    // return (Rgb){0, 0, 255, 0, 0, 0};
+    return (Rgb){100, 100, 100, 0, 0, 255};
 }
 
-void updateMapToScene(Scene *scene, Object *obj)
+void setSceneMap(Scene *scene, Object *map)
 {
-    for (SHORT i = 0; i < obj->h; i++)
+    for (SHORT i = 0; i < map->h; i++)
     {
-        for (SHORT j = 0; j < obj->w; j++)
+        for (SHORT j = 0; j < map->w; j++)
         {
-            scene->buffer[i + obj->y][j + obj->x].ch = getMapCh(scene->mode, obj->data[i][j]);
+            scene->buffer[i + map->y][j + map->x].ch = getMapCh(scene->mode, map->data[i][j]);
 
-            if (vtSupported)
+            if (scene->mode & RM_V)
             {
-                scene->buffer[i + obj->y][j + obj->x].color.rgb = getMapRgb(scene, obj->data[i][j], i, j);
+                scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(scene, map->data[i][j], i, j);
             }
             else
             {
-                scene->buffer[i + obj->y][j + obj->x].color.attr = getMapAttr(scene, obj->data[i][j], i, j);
+                scene->buffer[i + map->y][j + map->x].attrSet = true;
+                scene->buffer[i + map->y][j + map->x].color.attr = getMapAttr(scene, map->data[i][j], i, j);
             }
         }
     }
