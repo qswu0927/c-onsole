@@ -4,20 +4,39 @@
 #include "../core/music.h"
 #include "food.h"
 
-Snake *newSnake(SHORT x, SHORT y)
+Snake *newSnake(Object *map, bool npc)
 {
+    SHORT x = rand() % (map->w - 10) + 1;
+    SHORT y = rand() % (map->h - 2) + 1;
+
     Snake *snake = (Snake *)malloc(sizeof(Snake));
-    Node *node = (Node *)malloc(sizeof(Node));
-    node->x = x;
-    node->y = y;
-    node->next = NULL;
-    snake->tail = node;
+    snake->tail = NULL;
     snake->dir = DIR_NONE;
     snake->setDir = DIR_NONE;
+    snake->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
     snake->tick = 0;
     snake->alive = true;
-    snake->npc = true;
     snake->score = 0;
+    snake->npc = npc;
+    snake->focus = false;
+    // 初始化一定长度的蛇身
+    for (SHORT i = 0; i < rand() % 4 + 2; i++)
+    {
+        Node *node = (Node *)malloc(sizeof(Node));
+        node->x = x - i;
+        node->y = y;
+        node->data = rand() % 4;
+        if (snake->tail == NULL)
+        {
+            snake->tail = node;
+            node->next = NULL;
+        }
+        else
+        {
+            node->next = snake->tail;
+            snake->tail = node;
+        }
+    }
     return snake;
 }
 
@@ -35,7 +54,7 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
     Node *headNode = neckNode->next == NULL ? neckNode : neckNode->next;
 
     if (snakes[index]->dir == DIR_NONE)
-        snakes[index]->setDir = rand() % 4;
+        snakes[index]->dir = rand() % 4;
 
     Direction dir;
     Direction dirs[3];
@@ -110,9 +129,10 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
     if (snakes[index]->npc)
         autoDir(snakes, snakeCount, index, map);
 
-    // 方向变了，需要立即更新，避免玩家输入延迟
-    if (snakes[index]->dir == snakes[index]->setDir && snakes[index]->tick++ < 12 / snakes[index]->speed)
-        return;
+    if (snakes[index]->tick++ < 12 / snakes[index]->speed)
+        // 玩家方向变了，需要立即更新，避免输入延迟
+        if (snakes[index]->npc || snakes[index]->dir == snakes[index]->setDir)
+            return;
 
     snakes[index]->tick = 0;
     snakes[index]->dir = snakes[index]->setDir;
@@ -227,21 +247,15 @@ void setSceneSnake(Scene *scene, Snake *snake)
     {
         scene->buffer[node->y][node->x].ch = node->next == NULL ? getHeadCh(scene) : getFoodCh(scene, node->data);
 
-        if (scene->mode & RM_V)
-        {
-            Rgb color = getFoodRgb(scene, node->data);
-            // 蛇身背景
-            if (snake->npc)
-                color.br |= 0x99;
-            else
-                color.bg |= 0xaa;
-            scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode & RM_EM ? (Rgb){0} : (Rgb){0, 0, 0, 255, snake->npc ? 100 : 255, 0}) : color;
-        }
+        Rgb color = getFoodRgb(scene, node->data);
+        // 蛇身背景
+        if (snake->npc)
+            color.br |= 0x99;
         else
-        {
-            scene->buffer[node->y][node->x].attrSet = true;
-            scene->buffer[node->y][node->x].color.attr = node->next == NULL ? (scene->mode & RM_BG ? BACKGROUND_RED | BACKGROUND_GREEN : FOREGROUND_GREEN) : BACKGROUND_GREEN;
-        }
+            color.bg |= 0xaa;
+        if (snake->focus)
+            color.bb |= 0xcc;
+        scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode & RM_EM ? Rgb(50, 200, 0) : (Rgb){0, 0, 0, 255, snake->npc ? 100 : 255, 0}) : color;
     }
 }
 

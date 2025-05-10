@@ -83,13 +83,13 @@ Rgb getFoodRgb(Scene *scene, SHORT data)
         switch (data)
         {
         case 0:
-            return (Rgb){0, 0, 0, 255, 165, 0};
+            return Rgbb(255, 165, 0);
         case 1:
-            return (Rgb){0, 0, 0, 0, 128, 0};
+            return Rgbb(0, 128, 0);
         case 2:
-            return (Rgb){0, 0, 0, 0, 191, 255};
+            return Rgbb(0, 191, 255);
         default:
-            return (Rgb){0, 0, 0, 211, 211, 211};
+            return Rgbb(211, 211, 211);
         }
     }
     if (scene->mode & RM_CH)
@@ -114,15 +114,7 @@ void setSceneFood(Scene *scene, Food *food)
     for (Node *node = food->first; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getFoodCh(scene, node->data);
-        if (scene->mode & RM_V)
-        {
-            scene->buffer[node->y][node->x].color.rgb = getFoodRgb(scene, node->data);
-        }
-        else
-        {
-            scene->buffer[node->y][node->x].attrSet = true;
-            scene->buffer[node->y][node->x].color.attr = scene->mode & RM_BG ? BACKGROUND_RED : 0;
-        }
+        scene->buffer[node->y][node->x].color.rgb = getFoodRgb(scene, node->data);
     }
 }
 

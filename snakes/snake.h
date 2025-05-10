@@ -5,6 +5,9 @@
 #include "../core/util.h"
 #include "../core/render.h"
 
+#define SPEED_L 6
+#define SPEED_H 15
+
 struct Food;
 
 typedef struct Snake
@@ -20,9 +23,10 @@ typedef struct Snake
     bool alive;
     int score;
     bool npc;
+    bool focus;
 } Snake;
 
-Snake *newSnake(SHORT x, SHORT y);
+Snake *newSnake(Object *map, bool npc);
 void startSnake(void *context);
 void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, struct Food *food, Object *map);
 void setSceneSnake(Scene *scene, Snake *snake);

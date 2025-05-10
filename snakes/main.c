@@ -8,9 +8,6 @@
 
 #define CONFILE "config.dat"
 
-#define SPEED_L 6
-#define SPEED_H 15
-
 typedef enum
 {
     S_START = 1,
@@ -82,12 +79,12 @@ void handleInputEvent(InputEvent e)
         else if (e.vkCode == VK_ESCAPE)
             status = S_QUIT;
 
-        if (status & S_READY && dir != DIR_NONE && (snakes[0]->dir + 2) % 4 != dir /* 不允许原地掉头 */)
+        if (status & S_READY && snakes[0]->alive && dir != DIR_NONE && (snakes[0]->dir + 2) % 4 != dir /* 不允许原地掉头 */)
         {
             if (snakes[0]->setDir != dir)
             {
                 snakes[0]->setDir = dir;
-                playSoundSeq(3, 300, 5, 0);
+                // playSoundSeq(3, 300, 5, 0);
             }
             snakes[0]->speed = SPEED_H;
         }
@@ -96,6 +93,42 @@ void handleInputEvent(InputEvent e)
     {
         snakes[0]->speed = SPEED_L;
     }
+}
+
+void setCamera(void)
+{
+    Snake *snake = NULL;
+    // 摄像机跟随存活者
+    for (SHORT i = 0; i < snakeCount; i++)
+    {
+        if (snakes[i]->alive)
+        {
+            snakes[i]->focus = true;
+            snake = snakes[i];
+            break;
+        }
+        else
+            snakes[i]->focus = false;
+    }
+    if (snake == NULL)
+        return;
+
+    Node *node = snake->tail;
+    while (node->next != NULL)
+        node = node->next;
+
+    scene->camera.x = node->x - (scene->camera.w - messageW) / 2;
+    scene->camera.y = node->y - scene->camera.h / 2;
+
+    // 限位
+    if (scene->camera.x + scene->camera.w > scene->w)
+        scene->camera.x = scene->w - scene->camera.w;
+    if (scene->camera.y + scene->camera.h > scene->h)
+        scene->camera.y = scene->h - scene->camera.h;
+    if (scene->camera.x < 0)
+        scene->camera.x = 0;
+    if (scene->camera.y < 0)
+        scene->camera.y = 0;
 }
 
 void setMessage(void)
@@ -133,39 +166,6 @@ void setMessage(void)
     clearH = row - scene->camera.y;
 }
 
-void setCamera(void)
-{
-    Snake *snake = NULL;
-    // 摄像机跟随存活者
-    for (SHORT i = 0; i < snakeCount; i++)
-    {
-        if (snakes[i]->alive)
-        {
-            snake = snakes[i];
-            break;
-        }
-    }
-    if (snake == NULL)
-        return;
-
-    Node *node = snake->tail;
-    while (node->next != NULL)
-        node = node->next;
-
-    scene->camera.x = node->x - (scene->camera.w - messageW) / 2;
-    scene->camera.y = node->y - scene->camera.h / 2;
-
-    // 限位
-    if (scene->camera.x + scene->camera.w > scene->w)
-        scene->camera.x = scene->w - scene->camera.w;
-    if (scene->camera.y + scene->camera.h > scene->h)
-        scene->camera.y = scene->h - scene->camera.h;
-    if (scene->camera.x < 0)
-        scene->camera.x = 0;
-    if (scene->camera.y < 0)
-        scene->camera.y = 0;
-}
-
 void quit(void)
 {
     saveConfig(CONFILE, &config, sizeof(Config));
@@ -194,19 +194,11 @@ START:
     }
     snakes = (Snake **)malloc(sizeof(Snake *) * snakeCount);
     for (SHORT i = 0; i < snakeCount; i++)
-    {
-        snakes[i] = newSnake(rand() % (map->w - 2) + 1, rand() % (map->h - 2) + 1);
-        snakes[i]->speed = rand() % 12 + 3;
-    }
-    // 玩家
-    snakes[0]->tail->x = w / 4;
-    snakes[0]->tail->y = h / 2;
-    snakes[0]->speed = SPEED_L;
-    snakes[0]->npc = false;
+        snakes[i] = newSnake(map, i > 0);
 
     if (food)
         freeFood(&food);
-    food = newFood(map->w * map->h / 30);
+    food = newFood(map->w * map->h / 100);
 
     // 开场音乐
     int data[] = {100, 50, 20, 200, 50, 20, 300, 50, 20, 400, 100, 20, 300, 50, 20, 200, 50, 20, 100, 50, 20};
@@ -236,9 +228,9 @@ START:
         }
 
         setSceneMap(scene, map);
+        setSceneFood(scene, food);
         for (SHORT i = 0; i < snakeCount; i++)
             setSceneSnake(scene, snakes[i]);
-        setSceneFood(scene, food);
 
         if (snakes[0]->score > config.maxScore)
         {

@@ -28,19 +28,6 @@ wchar_t *getMapCh(RenderMode mode, CHAR data)
     return _wcsdup(L"🚧");
 }
 
-WORD getMapAttr(Scene *scene, CHAR data, SHORT i, SHORT j)
-{
-    // 深色模式
-    WORD colors[] = {0, 0x80};
-    // 浅色模式
-    // WORD colors[] = {0x70, 0xf0};
-    if (data == 0)
-        return colors[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(colors)];
-    if (scene->mode & RM_BG)
-        return BACKGROUND_BLUE;
-    return 0x01;
-}
-
 Rgb getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
     Rgb rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
@@ -63,15 +50,7 @@ void setSceneMap(Scene *scene, Object *map)
         {
             scene->buffer[i + map->y][j + map->x].ch = getMapCh(scene->mode, map->data[i][j]);
 
-            if (scene->mode & RM_V)
-            {
-                scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(scene, map->data[i][j], i, j);
-            }
-            else
-            {
-                scene->buffer[i + map->y][j + map->x].attrSet = true;
-                scene->buffer[i + map->y][j + map->x].color.attr = getMapAttr(scene, map->data[i][j], i, j);
-            }
+            scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(scene, map->data[i][j], i, j);
         }
     }
 }
