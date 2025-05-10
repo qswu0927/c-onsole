@@ -6,7 +6,19 @@
 #define Rgb(r, g, b) ((Rgb){r, g, b, 0, 0, 0})
 #define Rgbb(r, g, b) ((Rgb){0, 0, 0, r, g, b})
 
-typedef void (*InputCallback)(INPUT_RECORD *inputRecord, WORD vkCode, DWORD mState);
+typedef struct
+{
+    INPUT_RECORD *record;
+    // 是按下事件
+    bool kDown;
+    // 虚拟键码
+    WORD vkCode;
+    // 仅按下事件有值
+    WORD vkdCode;
+    // 鼠标状态
+    DWORD mState;
+} InputEvent;
+typedef void (*InputCallback)(InputEvent e);
 
 typedef struct
 {

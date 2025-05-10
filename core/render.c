@@ -457,18 +457,19 @@ void getInput(InputCallback callback)
         {
         // 键盘事件
         case KEY_EVENT:
-            if (irInBuf[i].Event.KeyEvent.bKeyDown)
-            {
-                WORD vkCode = irInBuf[i].Event.KeyEvent.wVirtualKeyCode;
-                callback(&irInBuf[i], vkCode, 0);
-            }
+            WORD vkCode = irInBuf[i].Event.KeyEvent.wVirtualKeyCode;
+            InputEvent e = {.record = &irInBuf[i], .kDown = irInBuf[i].Event.KeyEvent.bKeyDown, .vkCode = vkCode};
+            if (e.kDown)
+                e.vkdCode = e.vkCode;
+            callback(e);
             break;
         // 鼠标事件
         case MOUSE_EVENT:
             if (mouseInput && *mouseInput)
             {
                 MOUSE_EVENT_RECORD mer = irInBuf[i].Event.MouseEvent;
-                callback(&irInBuf[i], 0, mer.dwButtonState);
+                InputEvent e = {.record = &irInBuf[i], .mState = mer.dwButtonState};
+                callback(e);
             }
             break;
         case WINDOW_BUFFER_SIZE_EVENT:

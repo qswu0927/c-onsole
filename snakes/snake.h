@@ -11,7 +11,10 @@ typedef struct Snake
 {
     // 为方便操作节点，链表从尾指向头
     Node *tail;
+    // 当前方向
     Direction dir;
+    // 设定方向
+    Direction setDir;
     SHORT speed;
     SHORT tick;
     bool alive;

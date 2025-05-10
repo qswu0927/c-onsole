@@ -8,15 +8,18 @@
 
 #define CONFILE "config.dat"
 
+#define SPEED_L 6
+#define SPEED_H 15
+
 typedef enum
 {
-    S_START,
-    S_READY,
-    S_PAUSED,
-    S_OVER,
-    S_RESTART,
-    S_QUIT,
-    S_WIN = 1 << 7,
+    S_START = 1,
+    S_READY = 1 << 1,
+    S_PAUSED = 1 << 2,
+    S_OVER = 1 << 3,
+    S_RESTART = 1 << 4,
+    S_QUIT = 1 << 5,
+    S_WIN = 1 << 6,
 } Status;
 
 typedef struct
@@ -39,91 +42,68 @@ SHORT snakeCount = 10;
 SHORT aliveCount = 0;
 Food *food = NULL;
 
-void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
+void handleInputEvent(InputEvent e)
 {
-    // 显式忽略
-    (void)record;
-    (void)mState;
-
-    if (vkCode == 'A' || vkCode == VK_LEFT)
+    if (e.kDown)
     {
-        if (status & S_READY && snakes[0]->dir != DIR_RIGHT)
+        Direction dir = DIR_NONE;
+        if (e.vkCode == 'A' || e.vkCode == VK_LEFT)
+            dir = DIR_LEFT;
+        else if (e.vkCode == 'D' || e.vkCode == VK_RIGHT)
+            dir = DIR_RIGHT;
+        else if (e.vkCode == 'W' || e.vkCode == VK_UP)
+            dir = DIR_UP;
+        else if (e.vkCode == 'S' || e.vkCode == VK_DOWN)
+            dir = DIR_DOWN;
+        else if (e.vkCode == 'M')
         {
-            snakes[0]->dir = DIR_LEFT;
-            playSoundSeq(3, 300, 5, 0);
-        }
-    }
-    else if (vkCode == 'D' || vkCode == VK_RIGHT)
-    {
-        if (status & S_READY && snakes[0]->dir != DIR_LEFT)
-        {
-            snakes[0]->dir = DIR_RIGHT;
-            playSoundSeq(3, 300, 5, 0);
-        }
-    }
-    else if (vkCode == 'W' || vkCode == VK_UP)
-    {
-        if (status & S_READY && snakes[0]->dir != DIR_DOWN)
-        {
-            snakes[0]->dir = DIR_UP;
-            playSoundSeq(3, 300, 5, 0);
-        }
-    }
-    else if (vkCode == 'S' || vkCode == VK_DOWN)
-    {
-        if (status & S_READY && snakes[0]->dir != DIR_UP)
-        {
-            snakes[0]->dir = DIR_DOWN;
-            playSoundSeq(3, 300, 5, 0);
-        }
-    }
-    else if (vkCode == 'M')
-    {
-        if (!scene->mode)
-            scene->mode = RM_BG;
-        if (scene->mode & RM_V)
-        {
-            scene->mode ^= RM_V;
-            scene->mode <<= 1;
-            if (scene->mode >= RM_V)
+            if (!scene->mode)
                 scene->mode = RM_BG;
-        }
-        else
-        {
-            scene->mode |= RM_V;
-        }
-        config.mode = scene->mode;
-    }
-    else if (vkCode == 'P' || vkCode == VK_SPACE)
-    {
-        if (snakes[0]->alive)
-        {
-            if (status & S_READY)
+            if (scene->mode & RM_V)
             {
-                status ^= S_READY;
-                status |= S_PAUSED;
+                scene->mode ^= RM_V;
+                scene->mode <<= 1;
+                if (scene->mode >= RM_V)
+                    scene->mode = RM_BG;
             }
             else
-            {
-                status ^= S_PAUSED;
-                status |= S_READY;
-            }
+                scene->mode |= RM_V;
+            config.mode = scene->mode;
         }
-        else
-            status = S_RESTART;
+        else if (e.vkCode == 'P')
+        {
+            if (snakes[0]->alive)
+                status ^= S_READY | S_PAUSED;
+            else
+                status = S_RESTART;
+        }
+        else if (e.vkCode == 'K')
+            config.mute = !config.mute;
+        else if (e.vkCode == VK_ESCAPE)
+            status = S_QUIT;
+
+        if (status & S_READY && dir != DIR_NONE && (snakes[0]->dir + 2) % 4 != dir /* 不允许原地掉头 */)
+        {
+            if (snakes[0]->setDir != dir)
+            {
+                snakes[0]->setDir = dir;
+                playSoundSeq(3, 300, 5, 0);
+            }
+            snakes[0]->speed = SPEED_H;
+        }
     }
-    else if (vkCode == 'K')
-        config.mute = !config.mute;
-    else if (vkCode == VK_ESCAPE)
-        status = S_QUIT;
+    else
+    {
+        snakes[0]->speed = SPEED_L;
+    }
 }
 
 void setMessage(void)
 {
-    static SHORT row = 0;
-    clearSceneP(scene, scene->camera.x + scene->camera.w - messageW, scene->camera.y, messageW, row - scene->camera.y);
+    static SHORT clearH = 0;
+    clearSceneP(scene, scene->camera.x + scene->camera.w - messageW, scene->camera.y, messageW, clearH);
 
-    row = scene->camera.y;
+    SHORT row = scene->camera.y;
     SHORT col = scene->camera.x + scene->camera.w - messageW;
     setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", snakes[0]->score);
     setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
@@ -136,18 +116,21 @@ void setMessage(void)
         setSceneStr(scene, col, row++, Rgb(0, 0, 0), "");
     setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "方向控制: WASD|方向键");
+    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "加速: 长按上述键");
     if (snakes[0]->alive == false)
     {
         static SHORT count = 0;
         if (count++ > 10)
             count = 0;
-        setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P|空格键");
+        setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
     }
     else
-        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "暂停|继续: P|空格键");
+        setSceneStr(scene, col, row++, Rgb(100, 100, 100), "暂停|继续: P键");
     setSceneStr(scene, col, row++, Rgb(100, 100, 100), "退出: Esc键");
     setSceneStr(scene, col, row++, Rgb(100, 100, 100), config.mute ? "打开音效: K键" : "关闭音效: K键");
     setSceneStr(scene, col, row++, Rgb(80, 80, 80), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
+
+    clearH = row - scene->camera.y;
 }
 
 void setCamera(void)
@@ -195,7 +178,7 @@ int main(void)
     setupConsole((w + messageW) * 2, h, L"贪吃蛇");
     setupClose(quit);
 
-    scene = newScene(w + messageW + 10, h + 10);
+    scene = newScene(w + messageW + 20, h + 20);
     scene->camera.w = w + messageW;
     scene->camera.h = h;
     scene->mode = config.mode;
@@ -212,13 +195,13 @@ START:
     snakes = (Snake **)malloc(sizeof(Snake *) * snakeCount);
     for (SHORT i = 0; i < snakeCount; i++)
     {
-        snakes[i] = newSnake(rand() % (w - 2) + 1, rand() % (h - 2) + 1);
-        snakes[i]->speed = rand() % 12 + 4;
+        snakes[i] = newSnake(rand() % (map->w - 2) + 1, rand() % (map->h - 2) + 1);
+        snakes[i]->speed = rand() % 12 + 3;
     }
     // 玩家
     snakes[0]->tail->x = w / 4;
     snakes[0]->tail->y = h / 2;
-    snakes[0]->speed = 6;
+    snakes[0]->speed = SPEED_L;
     snakes[0]->npc = false;
 
     if (food)

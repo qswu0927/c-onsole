@@ -13,6 +13,7 @@ Snake *newSnake(SHORT x, SHORT y)
     node->next = NULL;
     snake->tail = node;
     snake->dir = DIR_NONE;
+    snake->setDir = DIR_NONE;
     snake->tick = 0;
     snake->alive = true;
     snake->npc = true;
@@ -23,7 +24,7 @@ Snake *newSnake(SHORT x, SHORT y)
 void startSnake(void *context)
 {
     Snake *snake = (Snake *)context;
-    snake->dir = DIR_RIGHT;
+    snake->setDir = DIR_RIGHT;
 }
 
 void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
@@ -34,7 +35,7 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
     Node *headNode = neckNode->next == NULL ? neckNode : neckNode->next;
 
     if (snakes[index]->dir == DIR_NONE)
-        snakes[index]->dir = rand() % 4;
+        snakes[index]->setDir = rand() % 4;
 
     Direction dir;
     Direction dirs[3];
@@ -98,34 +99,32 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
 
         break;
     }
-    snakes[index]->dir = dir;
+    snakes[index]->setDir = dir;
 }
 
 void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Object *map)
 {
-    static Direction lastDir = DIR_NONE;
-    // 方向变了，需要立即更新
-    if (snakes[index]->dir == lastDir && snakes[index]->tick++ < 12 / snakes[index]->speed)
-        return;
-    snakes[index]->tick = 0;
-    if (snakes[index]->npc == false)
-        lastDir = snakes[index]->dir;
-
     if (!snakes[index]->alive)
         return;
+
     if (snakes[index]->npc)
-    {
         autoDir(snakes, snakeCount, index, map);
-    }
+
+    // 方向变了，需要立即更新，避免玩家输入延迟
+    if (snakes[index]->dir == snakes[index]->setDir && snakes[index]->tick++ < 12 / snakes[index]->speed)
+        return;
+
+    snakes[index]->tick = 0;
+    snakes[index]->dir = snakes[index]->setDir;
+
     if (snakes[index]->dir == DIR_NONE)
         return;
 
     // 找到脖子节点
     Node *neckNode = snakes[index]->tail;
     while (neckNode->next != NULL && neckNode->next->next != NULL)
-    {
         neckNode = neckNode->next;
-    }
+
     // 找到头节点，考虑只有一个节点的情况
     Node *headNode = neckNode->next == NULL ? neckNode : neckNode->next;
 

@@ -36,9 +36,9 @@ Object *map = NULL;
 Object *block = NULL;
 Object *nextBlock = NULL;
 
-void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
+void handleInputEvent(InputEvent e)
 {
-    if (vkCode == 'A' || vkCode == VK_LEFT)
+    if (e.vkdCode == 'A' || e.vkdCode == VK_LEFT)
     {
         if (status == S_READY && !isCollided(block, map, -1, 0))
         {
@@ -46,7 +46,7 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
             playSoundSeq(3, 800, 30, 0);
         }
     }
-    else if (vkCode == 'D' || vkCode == VK_RIGHT)
+    else if (e.vkdCode == 'D' || e.vkdCode == VK_RIGHT)
     {
         if (status == S_READY && !isCollided(block, map, 1, 0))
         {
@@ -54,12 +54,12 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
             playSoundSeq(3, 800, 30, 0);
         }
     }
-    else if (vkCode == 'W' || vkCode == VK_UP || mState & RIGHTMOST_BUTTON_PRESSED)
+    else if (e.vkdCode == 'W' || e.vkdCode == VK_UP || e.mState & RIGHTMOST_BUTTON_PRESSED)
     {
         if (status == S_READY)
             rotateBlock(block, map);
     }
-    else if (vkCode == 'S' || vkCode == VK_DOWN)
+    else if (e.vkdCode == 'S' || e.vkdCode == VK_DOWN)
     {
         if (status == S_READY && !isCollided(block, map, 0, 1))
         {
@@ -67,12 +67,12 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
             playSoundSeq(3, 800, 30, 0);
         }
     }
-    else if (vkCode == VK_SPACE || mState & FROM_LEFT_1ST_BUTTON_PRESSED)
+    else if (e.vkdCode == VK_SPACE || e.mState & FROM_LEFT_1ST_BUTTON_PRESSED)
     {
         while (status == S_READY && !isCollided(block, map, 0, 1))
             block->y += 1;
     }
-    else if (vkCode == 'M')
+    else if (e.vkdCode == 'M')
     {
         if (!scene->mode)
             scene->mode = RM_BG;
@@ -89,21 +89,21 @@ void handleInputEvent(INPUT_RECORD *record, WORD vkCode, DWORD mState)
         }
         config.mode = scene->mode;
     }
-    else if (vkCode == 'P')
+    else if (e.vkdCode == 'P')
     {
         if (block->status == 2)
             status = S_RESTART;
         else
             status = status == S_READY ? S_PAUSED : S_READY;
     }
-    else if (vkCode == 'K')
+    else if (e.vkdCode == 'K')
         config.mute = !config.mute;
-    else if (vkCode == 'L')
+    else if (e.vkdCode == 'L')
         config.mouseInput = !config.mouseInput;
-    else if (vkCode == VK_ESCAPE)
+    else if (e.vkdCode == VK_ESCAPE)
         status = S_QUIT;
 
-    MOUSE_EVENT_RECORD mer = record->Event.MouseEvent;
+    MOUSE_EVENT_RECORD mer = e.record->Event.MouseEvent;
     // 鼠标移动检测
     if (mer.dwEventFlags & MOUSE_MOVED && mer.dwButtonState == 0)
     {
