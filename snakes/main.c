@@ -227,19 +227,17 @@ START:
             updateFood(food, snakes, snakeCount, map);
         }
 
+        setCamera();
         setSceneMap(scene, map);
         setSceneFood(scene, food);
         for (SHORT i = 0; i < snakeCount; i++)
             setSceneSnake(scene, snakes[i]);
 
-        if (snakes[0]->score > config.maxScore)
-        {
-            config.maxScore = snakes[0]->score;
-        }
-
-        setCamera();
         setMessage();
         renderScene(scene);
+
+        if (snakes[0]->score > config.maxScore)
+            config.maxScore = snakes[0]->score;
 
         aliveCount = getAliveCount(snakes, snakeCount);
         if ((status & S_WIN) == 0 && aliveCount == 1 && snakes[0]->alive)

@@ -6,25 +6,53 @@
 
 Snake *newSnake(Object *map, bool npc)
 {
-    SHORT x = rand() % (map->w - 10) + 1;
+    SHORT x = rand() % (map->w - 2) + 1;
     SHORT y = rand() % (map->h - 2) + 1;
+    // NPC从四周边缘进场
+    Direction dir = rand() % 4;
+    if (dir == DIR_UP)
+        y = map->h - 1;
+    else if (dir == DIR_DOWN)
+        y = 0;
+    else if (dir == DIR_LEFT)
+        x = map->w - 1;
+    else if (dir == DIR_RIGHT)
+        x = 0;
 
     Snake *snake = (Snake *)malloc(sizeof(Snake));
     snake->tail = NULL;
-    snake->dir = DIR_NONE;
-    snake->setDir = DIR_NONE;
+    snake->dir = dir;
+    snake->setDir = dir;
     snake->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
     snake->tick = 0;
     snake->alive = true;
     snake->score = 0;
     snake->npc = npc;
     snake->focus = false;
+    // 玩家
+    if (!npc)
+    {
+        dir = DIR_RIGHT;
+        x = map->w / 2;
+        y = map->h / 2;
+        snake->dir = DIR_NONE;
+        snake->setDir = DIR_NONE;
+        snake->speed = SPEED_L;
+    }
     // 初始化一定长度的蛇身
-    for (SHORT i = 0; i < rand() % 4 + 2; i++)
+    for (SHORT i = 0; i < rand() % 3 + 2; i++)
     {
         Node *node = (Node *)malloc(sizeof(Node));
-        node->x = x - i;
+        node->x = x;
         node->y = y;
+        if (dir == DIR_UP)
+            node->y += i;
+        else if (dir == DIR_DOWN)
+            node->y -= i;
+        else if (dir == DIR_LEFT)
+            node->x += i;
+        else if (dir == DIR_RIGHT)
+            node->x -= i;
         node->data = rand() % 4;
         if (snake->tail == NULL)
         {
@@ -245,6 +273,8 @@ void setSceneSnake(Scene *scene, Snake *snake)
 {
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
+        if (node->x < scene->camera.x || node->x >= scene->camera.x + scene->camera.w || node->y < scene->camera.y || node->y >= scene->camera.y + scene->camera.h)
+            continue;
         scene->buffer[node->y][node->x].ch = node->next == NULL ? getHeadCh(scene) : getFoodCh(scene, node->data);
 
         Rgb color = getFoodRgb(scene, node->data);
