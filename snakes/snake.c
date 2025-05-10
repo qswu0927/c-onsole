@@ -130,6 +130,8 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
         {
             if (j == index)
                 continue;
+            if (snakes[j]->alive == false)
+                continue;
             for (Node *node = snakes[j]->tail; node != NULL; node = node->next)
             {
                 if (node->x == x && node->y == y)
@@ -228,6 +230,8 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
         {
             if (j == index)
                 continue;
+            if (snakes[j]->alive == false)
+                continue;
             for (Node *node = snakes[j]->tail; node != NULL; node = node->next)
             {
                 if (node->x == x && node->y == y)
@@ -255,7 +259,21 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
         }
         else
         {
-            playSoundSeq(3, snakes[index]->npc ? 300 : 350, 100, 0);
+            playSoundSeq(3, snakes[index]->npc ? 350 : 450, 100, 0);
+            // 转成食物
+            for (Node *node = snakes[index]->tail; node != NULL; node = node->next)
+            {
+                // 避免正在穿墙的蛇转成食物卡在墙里
+                if (node->x <= map->x || node->x >= map->x + map->w - 1 || node->y <= map->y || node->y >= map->y + map->h - 1)
+                    continue;
+
+                Node *fNode = (Node *)malloc(sizeof(Node));
+                fNode->x = node->x;
+                fNode->y = node->y;
+                fNode->data = node->data;
+                fNode->next = food->first;
+                food->first = fNode;
+            }
         }
     }
 }
@@ -271,6 +289,8 @@ wchar_t *getHeadCh(Scene *scene)
 
 void setSceneSnake(Scene *scene, Snake *snake)
 {
+    if (snake->alive == false)
+        return;
     for (Node *node = snake->tail; node != NULL; node = node->next)
     {
         if (node->x < scene->camera.x || node->x >= scene->camera.x + scene->camera.w || node->y < scene->camera.y || node->y >= scene->camera.y + scene->camera.h)
