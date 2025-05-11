@@ -37,7 +37,23 @@ Object *map = NULL;
 Snake **snakes = NULL;
 SHORT snakeCount = 10;
 SHORT aliveCount = 0;
+SHORT focusOn = 0;
+
 Food *food = NULL;
+
+void changeFocus(void)
+{
+    SHORT tmp = focusOn;
+    do
+    {
+        tmp++;
+        if (tmp >= snakeCount)
+            tmp = 0;
+    } while (snakes[tmp]->alive == false && tmp != focusOn);
+    snakes[focusOn]->focus = false;
+    focusOn = tmp;
+    snakes[focusOn]->focus = true;
+}
 
 void handleInputEvent(InputEvent e)
 {
@@ -52,6 +68,8 @@ void handleInputEvent(InputEvent e)
             dir = DIR_UP;
         else if (e.vkCode == 'S' || e.vkCode == VK_DOWN)
             dir = DIR_DOWN;
+        else if (e.vkCode == 'G')
+            changeFocus();
         else if (e.vkCode == 'M')
         {
             if (!scene->mode)
@@ -97,23 +115,17 @@ void handleInputEvent(InputEvent e)
 
 void setCamera(void)
 {
-    Snake *snake = NULL;
-    // 摄像机跟随存活者
-    for (SHORT i = 0; i < snakeCount; i++)
+    static SHORT count = 0;
+    if (snakes[focusOn]->alive == false)
+        count++;
+    // 镜头延迟切换
+    if (count > 15)
     {
-        if (snakes[i]->alive)
-        {
-            snakes[i]->focus = true;
-            snake = snakes[i];
-            break;
-        }
-        else
-            snakes[i]->focus = false;
+        changeFocus();
+        count = 0;
     }
-    if (snake == NULL)
-        return;
 
-    Node *node = snake->tail;
+    Node *node = snakes[focusOn]->tail;
     while (node->next != NULL)
         node = node->next;
 
@@ -138,23 +150,25 @@ void setMessage(void)
 
     SHORT row = scene->camera.y;
     SHORT col = scene->camera.x + scene->camera.w - messageW;
+
+    static SHORT count = 0;
+    if (count++ > 10)
+        count = 0;
     setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", snakes[0]->score);
     setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "玩家: %d/%d", aliveCount, snakeCount);
     if (status & S_WIN)
-        setSceneStr(scene, col, row++, Rgb(200, 200, 0), "胜利😄");
+        setSceneStr(scene, col, row++, Rgb(200, count > 5 ? 200 : 255, 0), "恭喜，您已胜出😄");
     else if (!snakes[0]->alive)
-        setSceneStr(scene, col, row++, Rgb(150, 50, 0), "失败😂");
-    else
-        setSceneStr(scene, col, row++, Rgb(0, 0, 0), "");
+    {
+        setSceneStr(scene, col, row++, Rgb(180, 50, 0), "哎呀，挑战失败😂");
+        setSceneStr(scene, col, row++, Rgb(150, 150, count > 5 ? 150 : 255), "正在观战%d号，按G切换", focusOn);
+    }
     setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "方向控制: WASD|方向键");
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "加速: 长按上述键");
     if (snakes[0]->alive == false)
     {
-        static SHORT count = 0;
-        if (count++ > 10)
-            count = 0;
         setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
     }
     else
@@ -195,6 +209,7 @@ START:
     snakes = (Snake **)malloc(sizeof(Snake *) * snakeCount);
     for (SHORT i = 0; i < snakeCount; i++)
         snakes[i] = newSnake(map, i > 0);
+    focusOn = 0;
 
     if (food)
         freeFood(&food);

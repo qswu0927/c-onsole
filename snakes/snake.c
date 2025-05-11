@@ -38,6 +38,7 @@ Snake *newSnake(Object *map, bool npc)
         snake->dir = DIR_NONE;
         snake->setDir = DIR_NONE;
         snake->speed = SPEED_L;
+        snake->focus = true;
     }
     // 初始化一定长度的蛇身
     for (SHORT i = 0; i < rand() % 3 + 2; i++)
@@ -260,6 +261,7 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
         else
         {
             playSoundSeq(3, snakes[index]->npc ? 350 : 450, 100, 0);
+            snakes[index]->focus = false;
             // 转成食物
             for (Node *node = snakes[index]->tail; node != NULL; node = node->next)
             {
