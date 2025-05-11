@@ -75,7 +75,7 @@ void startSnake(void *context)
     snake->setDir = DIR_RIGHT;
 }
 
-void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
+void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map, Food *food)
 {
     Node *neckNode = snakes[index]->tail;
     while (neckNode->next != NULL && neckNode->next->next != NULL)
@@ -85,8 +85,8 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
     if (snakes[index]->dir == DIR_NONE)
         snakes[index]->dir = rand() % 4;
 
-    Direction dir;
     Direction dirs[3];
+    SHORT dirWeight[3];
     dirs[2] = snakes[index]->dir;
     dirs[1] = (dirs[2] + 1) % 4;
     // dirs[0] = (dirs[2] + 2) % 4; // 不允许原地掉头
@@ -96,44 +96,33 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
 
     for (SHORT i = 2; i >= 0; i--)
     {
-        dir = dirs[i];
+        Direction dir = dirs[i];
 
+        dirWeight[i] = 0;
         SHORT x = headNode->x;
         SHORT y = headNode->y;
-        if (dir == DIR_UP)
-            y--;
-        else if (dir == DIR_DOWN)
-            y++;
-        else if (dir == DIR_LEFT)
-            x--;
-        else if (dir == DIR_RIGHT)
-            x++;
-
-        // 判断撞墙
-        if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
-            continue;
-
-        bool hit = false;
-        // 判断撞到自己
-        for (Node *node = snakes[index]->tail; node->next != NULL; node = node->next)
+        // 探测深度
+        for (SHORT r = 5; r > 0; r--)
         {
-            if (node->x == x && node->y == y)
+            if (dir == DIR_UP)
+                y--;
+            else if (dir == DIR_DOWN)
+                y++;
+            else if (dir == DIR_LEFT)
+                x--;
+            else if (dir == DIR_RIGHT)
+                x++;
+
+            // 判断撞墙
+            if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
             {
-                hit = true;
+                dirWeight[i] -= r;
                 break;
             }
-        }
-        if (hit)
-            continue;
 
-        // 判断撞到其他蛇
-        for (SHORT j = 0; j < snakeCount; j++)
-        {
-            if (j == index)
-                continue;
-            if (snakes[j]->alive == false)
-                continue;
-            for (Node *node = snakes[j]->tail; node != NULL; node = node->next)
+            bool hit = false;
+            // 判断撞到自己
+            for (Node *node = snakes[index]->tail; node->next != NULL; node = node->next)
             {
                 if (node->x == x && node->y == y)
                 {
@@ -142,14 +131,64 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map)
                 }
             }
             if (hit)
+            {
+                dirWeight[i] -= r;
                 break;
-        }
-        if (hit)
-            continue;
+            }
 
-        break;
+            // 判断撞到其他蛇
+            for (SHORT j = 0; j < snakeCount; j++)
+            {
+                if (j == index)
+                    continue;
+                if (snakes[j]->alive == false)
+                    continue;
+                for (Node *node = snakes[j]->tail; node != NULL; node = node->next)
+                {
+                    if (node->x == x && node->y == y)
+                    {
+                        hit = true;
+                        break;
+                    }
+                }
+                if (hit)
+                    break;
+            }
+            if (hit)
+            {
+                dirWeight[i] -= r;
+                break;
+            }
+
+            // 判断吃到食物
+            for (Node *node = food->first; node != NULL; node = node->next)
+            {
+                if (node->x == x && node->y == y)
+                {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit)
+            {
+                dirWeight[i] += r;
+                continue;
+            }
+        }
     }
-    snakes[index]->setDir = dir;
+
+    // 取权重最大的方向
+    SHORT maxWeight = dirWeight[2];
+    SHORT maxIndex = 2;
+    for (SHORT i = 1; i >= 0; i--)
+    {
+        if (dirWeight[i] > maxWeight)
+        {
+            maxWeight = dirWeight[i];
+            maxIndex = i;
+        }
+    }
+    snakes[index]->setDir = dirs[maxIndex];
 }
 
 void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Object *map)
@@ -158,7 +197,7 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
         return;
 
     if (snakes[index]->npc)
-        autoDir(snakes, snakeCount, index, map);
+        autoDir(snakes, snakeCount, index, map, food);
 
     if (snakes[index]->tick++ < 12 / snakes[index]->speed)
         // 玩家方向变了，需要立即更新，避免输入延迟

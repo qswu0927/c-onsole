@@ -68,7 +68,7 @@ void handleInputEvent(InputEvent e)
             dir = DIR_UP;
         else if (e.vkCode == 'S' || e.vkCode == VK_DOWN)
             dir = DIR_DOWN;
-        else if (e.vkCode == 'G')
+        else if (e.vkCode == 'G' && !snakes[0]->alive)
             changeFocus();
         else if (e.vkCode == 'M')
         {
