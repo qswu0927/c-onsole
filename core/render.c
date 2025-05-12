@@ -73,7 +73,7 @@ WORD rgb2attr(Rgb rgb)
         attr |= FOREGROUND_GREEN;
     if (rgb.b > threshold)
         attr |= FOREGROUND_BLUE;
-    if (rgb.r > threshold1 && rgb.g > threshold1 && rgb.b > threshold1)
+    if (rgb.r + rgb.g + rgb.b > 2 * threshold1)
         attr |= FOREGROUND_INTENSITY;
     if (attr == 0 && rgb.r + rgb.g + rgb.b > threshold2)
         attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
@@ -85,7 +85,7 @@ WORD rgb2attr(Rgb rgb)
         attrB |= BACKGROUND_GREEN;
     if (rgb.bb > threshold)
         attrB |= BACKGROUND_BLUE;
-    if (rgb.br > threshold1 && rgb.bg > threshold1 && rgb.bb > threshold1)
+    if (rgb.br + rgb.bg + rgb.bb > 2 * threshold1)
         attrB |= BACKGROUND_INTENSITY;
     if (attrB == 0 && rgb.br + rgb.bg + rgb.bb > threshold2)
         attrB = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;

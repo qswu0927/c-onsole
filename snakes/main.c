@@ -29,7 +29,7 @@ typedef struct
 Config config = {.mode = RM_CH, .fontSize = 18, .mute = false, .maxScore = 0};
 
 FrameRate fr;
-SHORT w = 20, h = 20;
+SHORT w = 25, h = 25;
 SHORT messageW = 15;
 Status status = S_START;
 

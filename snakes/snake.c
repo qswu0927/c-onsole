@@ -346,7 +346,7 @@ void setSceneSnake(Scene *scene, Snake *snake)
             color.bg |= 0xaa;
         if (snake->focus)
             color.bb |= 0xcc;
-        scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode & RM_EM ? Rgb(50, 200, 0) : (Rgb){0, 0, 0, 255, snake->npc ? 100 : 255, 0}) : color;
+        scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode & RM_EM ? Rgb(50, 200, 0) : Rgbb(190, 200, 0)) : color;
     }
 }
 

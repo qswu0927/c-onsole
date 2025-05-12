@@ -79,34 +79,22 @@ wchar_t *getFoodCh(Scene *scene, SHORT data)
 Rgb getFoodRgb(Scene *scene, SHORT data)
 {
     if (scene->mode & RM_BG)
-    {
-        switch (data)
-        {
-        case 0:
-            return Rgbb(255, 165, 0);
-        case 1:
-            return Rgbb(0, 128, 0);
-        case 2:
-            return Rgbb(0, 191, 255);
-        default:
-            return Rgbb(211, 211, 211);
-        }
-    }
+        return Rgbb(40, 120, 0);
     if (scene->mode & RM_CH)
     {
         switch (data)
         {
         case 0:
-            return (Rgb){147, 112, 219, 0, 0, 0};
+            return Rgb(147, 112, 219);
         case 1:
-            return (Rgb){0, 128, 0, 0, 0, 0};
+            return Rgb(0, 128, 0);
         case 2:
-            return (Rgb){0, 191, 255, 0, 0, 0};
+            return Rgb(0, 191, 255);
         default:
-            return (Rgb){190, 190, 190, 0, 0, 0};
+            return Rgb(190, 190, 190);
         }
     }
-    return (Rgb){255, 255, 255, 0, 0, 0};
+    return Rgb(255, 165, 0);
 }
 
 void setSceneFood(Scene *scene, Food *food)
