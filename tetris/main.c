@@ -20,14 +20,16 @@ typedef enum
 typedef struct
 {
     RenderMode mode;
-    int maxScore;
+    SHORT fontSize;
     bool mute;
     bool mouseInput;
+    int maxScore;
 } Config;
-Config config = {.mode = RM_BG, .maxScore = 0, .mute = false, .mouseInput = false};
+Config config = {.mode = RM_BG, .fontSize = 18, .mute = false, .mouseInput = false, .maxScore = 0};
 
 FrameRate fr;
 SHORT w = 12, h = 22;
+SHORT messageW = 15;
 COORD currentPos;
 Status status = S_START;
 
@@ -72,23 +74,6 @@ void handleInputEvent(InputEvent e)
         while (status == S_READY && !isCollided(block, map, 0, 1))
             block->y += 1;
     }
-    else if (e.vkdCode == 'M')
-    {
-        if (!scene->mode)
-            scene->mode = RM_BG;
-        if (scene->mode & RM_V)
-        {
-            scene->mode ^= RM_V;
-            scene->mode <<= 1;
-            if (scene->mode >= RM_V)
-                scene->mode = RM_BG;
-        }
-        else
-        {
-            scene->mode |= RM_V;
-        }
-        config.mode = scene->mode;
-    }
     else if (e.vkdCode == 'P')
     {
         if (block->status == 2)
@@ -96,6 +81,12 @@ void handleInputEvent(InputEvent e)
         else
             status = status == S_READY ? S_PAUSED : S_READY;
     }
+    else if (e.vkdCode == 'M')
+        config.mode = changeSceneMode(scene);
+    else if (e.vkdCode == VK_OEM_PLUS || e.vkdCode == VK_ADD)
+        setConsoleFontSize(hStdOut, ++config.fontSize);
+    else if (e.vkdCode == VK_OEM_MINUS || e.vkdCode == VK_SUBTRACT)
+        setConsoleFontSize(hStdOut, --config.fontSize);
     else if (e.vkdCode == 'K')
         config.mute = !config.mute;
     else if (e.vkdCode == 'L')
@@ -133,7 +124,6 @@ void setMessage(void)
     setSceneStr(scene, col, 0, Rgb(100, 100, 100), "下一个:");
     setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", score);
     setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
-    setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: ASD|方向键");
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "旋转: W|上键");
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "速降: 空格键");
@@ -149,6 +139,8 @@ void setMessage(void)
     else
         setSceneStr(scene, col, row++, Rgb(100, 100, 100), "暂停|继续: P键");
     setSceneStr(scene, col, row++, Rgb(100, 100, 100), "退出: Esc键");
+    setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
+    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "字体大小: %d，按+-调整", config.fontSize);
     setSceneStr(scene, col, row++, Rgb(100, 100, 100), config.mute ? "打开音效: K键" : "关闭音效: K键");
     if (config.mouseInput)
     {
@@ -175,9 +167,10 @@ int main(void)
     loadConfig(CONFILE, &config, sizeof(Config));
     mute = &config.mute;
     mouseInput = &config.mouseInput;
-    setupConsole((w + 15) * 2, h, L"Tetris");
+    setupConsole((w + messageW) * 2, h, config.fontSize, L"Tetris");
     setupClose(quit);
-    scene = newScene(w + 15, h);
+
+    scene = newScene(w + messageW, h);
     scene->mode = config.mode;
 START:
     status = S_START;
@@ -254,11 +247,12 @@ START:
             }
         }
 
+        setMessage();
+        renderScene(scene);
+
         if (score > config.maxScore)
             config.maxScore = score;
 
-        setMessage();
-        renderScene(scene);
         frameEnd(&fr);
     }
 

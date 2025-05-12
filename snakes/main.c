@@ -22,10 +22,11 @@ typedef enum
 typedef struct
 {
     RenderMode mode;
-    int maxScore;
+    SHORT fontSize;
     bool mute;
+    int maxScore;
 } Config;
-Config config = {.mode = RM_CH, .maxScore = 0, .mute = false};
+Config config = {.mode = RM_CH, .fontSize = 18, .mute = false, .maxScore = 0};
 
 FrameRate fr;
 SHORT w = 20, h = 20;
@@ -38,7 +39,6 @@ Snake **snakes = NULL;
 SHORT snakeCount = 10;
 SHORT aliveCount = 0;
 SHORT focusOn = 0;
-
 Food *food = NULL;
 
 void changeFocus(void)
@@ -57,60 +57,47 @@ void changeFocus(void)
 
 void handleInputEvent(InputEvent e)
 {
-    if (e.kDown)
+    Direction dir = DIR_NONE;
+    if (e.vkdCode == 'A' || e.vkdCode == VK_LEFT)
+        dir = DIR_LEFT;
+    else if (e.vkdCode == 'D' || e.vkdCode == VK_RIGHT)
+        dir = DIR_RIGHT;
+    else if (e.vkdCode == 'W' || e.vkdCode == VK_UP)
+        dir = DIR_UP;
+    else if (e.vkdCode == 'S' || e.vkdCode == VK_DOWN)
+        dir = DIR_DOWN;
+    else if (e.vkdCode == 'G' && !snakes[0]->alive)
+        changeFocus();
+    else if (e.vkdCode == 'P')
     {
-        Direction dir = DIR_NONE;
-        if (e.vkCode == 'A' || e.vkCode == VK_LEFT)
-            dir = DIR_LEFT;
-        else if (e.vkCode == 'D' || e.vkCode == VK_RIGHT)
-            dir = DIR_RIGHT;
-        else if (e.vkCode == 'W' || e.vkCode == VK_UP)
-            dir = DIR_UP;
-        else if (e.vkCode == 'S' || e.vkCode == VK_DOWN)
-            dir = DIR_DOWN;
-        else if (e.vkCode == 'G' && !snakes[0]->alive)
-            changeFocus();
-        else if (e.vkCode == 'M')
-        {
-            if (!scene->mode)
-                scene->mode = RM_BG;
-            if (scene->mode & RM_V)
-            {
-                scene->mode ^= RM_V;
-                scene->mode <<= 1;
-                if (scene->mode >= RM_V)
-                    scene->mode = RM_BG;
-            }
-            else
-                scene->mode |= RM_V;
-            config.mode = scene->mode;
-        }
-        else if (e.vkCode == 'P')
-        {
-            if (snakes[0]->alive)
-                status ^= S_READY | S_PAUSED;
-            else
-                status = S_RESTART;
-        }
-        else if (e.vkCode == 'K')
-            config.mute = !config.mute;
-        else if (e.vkCode == VK_ESCAPE)
-            status = S_QUIT;
+        if (snakes[0]->alive)
+            status ^= S_READY | S_PAUSED;
+        else
+            status = S_RESTART;
+    }
+    else if (e.vkdCode == 'M')
+        config.mode = changeSceneMode(scene);
+    else if (e.vkdCode == VK_OEM_PLUS || e.vkdCode == VK_ADD)
+        setConsoleFontSize(hStdOut, ++config.fontSize);
+    else if (e.vkdCode == VK_OEM_MINUS || e.vkdCode == VK_SUBTRACT)
+        setConsoleFontSize(hStdOut, --config.fontSize);
+    else if (e.vkdCode == 'K')
+        config.mute = !config.mute;
+    else if (e.vkdCode == VK_ESCAPE)
+        status = S_QUIT;
 
-        if (status & S_READY && snakes[0]->alive && dir != DIR_NONE && (snakes[0]->dir + 2) % 4 != dir /* 不允许原地掉头 */)
-        {
-            if (snakes[0]->setDir != dir)
-            {
-                snakes[0]->setDir = dir;
-                // playSoundSeq(3, 300, 5, 0);
-            }
-            snakes[0]->speed = SPEED_H;
-        }
-    }
-    else
+    if (status & S_READY && snakes[0]->alive && dir != DIR_NONE && (snakes[0]->dir + 2) % 4 != dir /* 不允许原地掉头 */)
     {
-        snakes[0]->speed = SPEED_L;
+        if (snakes[0]->setDir != dir)
+        {
+            snakes[0]->setDir = dir;
+            // playSoundSeq(3, 300, 5, 0);
+        }
+        snakes[0]->speed = SPEED_H;
     }
+
+    if (!e.kDown)
+        snakes[0]->speed = SPEED_L;
 }
 
 void setCamera(void)
@@ -164,7 +151,6 @@ void setMessage(void)
         setSceneStr(scene, col, row++, Rgb(180, 50, 0), "哎呀，挑战失败😂");
         setSceneStr(scene, col, row++, Rgb(150, 150, count > 5 ? 150 : 255), "正在观战%d号，按G切换", focusOn);
     }
-    setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "方向控制: WASD|方向键");
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "加速: 长按上述键");
     if (snakes[0]->alive == false)
@@ -174,6 +160,8 @@ void setMessage(void)
     else
         setSceneStr(scene, col, row++, Rgb(100, 100, 100), "暂停|继续: P键");
     setSceneStr(scene, col, row++, Rgb(100, 100, 100), "退出: Esc键");
+    setSceneStr(scene, col, row++, Rgb(0, 120, 120), "输出模式: %d，按M切换", scene->mode);
+    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "字体大小: %d，按+-调整", config.fontSize);
     setSceneStr(scene, col, row++, Rgb(100, 100, 100), config.mute ? "打开音效: K键" : "关闭音效: K键");
     setSceneStr(scene, col, row++, Rgb(80, 80, 80), "帧率: %5.2fFps", 1000.0 / fr.elapsedMs);
 
@@ -189,7 +177,7 @@ int main(void)
 {
     loadConfig(CONFILE, &config, sizeof(Config));
     mute = &config.mute;
-    setupConsole((w + messageW) * 2, h, L"贪吃蛇");
+    setupConsole((w + messageW) * 2, h, config.fontSize, L"贪吃蛇");
     setupClose(quit);
 
     scene = newScene(w + messageW + 20, h + 20);

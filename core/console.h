@@ -14,8 +14,9 @@ extern bool vtSupported;
 extern bool *mouseInput;
 
 void hideConsoleCursor(void);
-BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName);
-void setupConsole(SHORT w, SHORT h, wchar_t *title);
+BOOL setConsoleFont(HANDLE hStdOut, SHORT size, const wchar_t *fontName);
+BOOL setConsoleFontSize(HANDLE hStdOut, SHORT size);
+void setupConsole(SHORT w, SHORT h, SHORT fontSize, wchar_t *title);
 void setupClose(QuitFunc quit);
 
 #endif

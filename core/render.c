@@ -273,6 +273,22 @@ void freeScene(Scene **scenePtr)
     *scenePtr = NULL;
 }
 
+RenderMode changeSceneMode(Scene *scene)
+{
+    if (!scene->mode)
+        scene->mode = RM_BG;
+    if (scene->mode & RM_V)
+    {
+        scene->mode ^= RM_V;
+        scene->mode <<= 1;
+        if (scene->mode >= RM_V)
+            scene->mode = RM_BG;
+    }
+    else
+        scene->mode |= RM_V;
+    return scene->mode;
+}
+
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
 {
     Object *obj = (Object *)malloc(sizeof(Object));

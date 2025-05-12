@@ -76,7 +76,7 @@ void hideConsoleCursor(void)
 }
 
 // 设置控制台字体（支持大小、粗细、字体名）
-BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName)
+BOOL setConsoleFont(HANDLE hStdOut, SHORT size, const wchar_t *fontName)
 {
     CONSOLE_FONT_INFOEX fontInfo = {0};
     fontInfo.cbSize = sizeof(fontInfo);
@@ -87,6 +87,17 @@ BOOL setConsoleFont(HANDLE hStdOut, int size, const wchar_t *fontName)
     fontInfo.FontWeight = FW_NORMAL;                    // 粗细（FW_BOLD 加粗）
     wcscpy_s(fontInfo.FaceName, LF_FACESIZE, fontName); // 字体名（如 L"Consolas"）
 
+    return SetCurrentConsoleFontEx(hStdOut, FALSE, &fontInfo);
+}
+
+// 设置控制台字体大小
+BOOL setConsoleFontSize(HANDLE hStdOut, SHORT size)
+{
+    CONSOLE_FONT_INFOEX fontInfo = {0};
+    // 必须初始化cbSize
+    fontInfo.cbSize = sizeof(fontInfo);
+    GetCurrentConsoleFontEx(hStdOut, FALSE, &fontInfo);
+    fontInfo.dwFontSize.Y = size;
     return SetCurrentConsoleFontEx(hStdOut, FALSE, &fontInfo);
 }
 
@@ -166,7 +177,7 @@ BOOL WINAPI handleConsole(DWORD event)
 }
 
 // 设置控制台
-void setupConsole(SHORT w, SHORT h, wchar_t *title)
+void setupConsole(SHORT w, SHORT h, SHORT fontSize, wchar_t *title)
 {
     hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     hStdIn = GetStdHandle(STD_INPUT_HANDLE);
@@ -183,7 +194,7 @@ void setupConsole(SHORT w, SHORT h, wchar_t *title)
     SetConsoleTitleW(title);
 
     // 设置控制台字体，其他推荐：|新宋体|黑体|MS Gothic
-    setConsoleFont(hStdOut, 18, L"黑体");
+    setConsoleFont(hStdOut, fontSize, L"黑体");
 
     // 获取当前窗口大小
     // CONSOLE_SCREEN_BUFFER_INFO csbi;
