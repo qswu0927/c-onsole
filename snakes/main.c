@@ -225,7 +225,7 @@ START:
         {
             for (SHORT i = 0; i < snakeCount; i++)
             {
-                updateSnake(snakes, snakeCount, i, food, map);
+                updateSnake(snakes, snakeCount, i, food, map, scene);
             }
             updateFood(food, snakes, snakeCount, map);
         }

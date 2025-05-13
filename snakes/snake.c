@@ -191,7 +191,7 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map, Food *f
     snakes[index]->setDir = dirs[maxIndex];
 }
 
-void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Object *map)
+void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Object *map, Scene *scene)
 {
     if (!snakes[index]->alive)
         return;
@@ -234,7 +234,9 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
     if (eat >= 0)
     {
         snakes[index]->score++;
-        playSoundSeq(3, 400 + eat * 200, 5, 0);
+        // 在可视区域内才播放音效
+        if (x >= scene->camera.x && x < scene->camera.x + scene->camera.w && y >= scene->camera.y && y < scene->camera.y + scene->camera.h)
+            playSoundSeq(3, 400 + eat * 200, 5, 0);
         Node *newNode = (Node *)malloc(sizeof(Node));
         newNode->data = eat;
         // 新节点位置是原头部位置

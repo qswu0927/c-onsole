@@ -30,7 +30,7 @@ wchar_t *getMapCh(RenderMode mode, CHAR data)
 
 Rgb getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
-    Rgb rgbs[] = {{0}, {0, 0, 0, 8, 8, 8}};
+    Rgb rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
 
     if (data == 0)
         return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];

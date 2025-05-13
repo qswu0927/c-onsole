@@ -28,7 +28,7 @@ typedef struct Snake
 
 Snake *newSnake(Object *map, bool npc);
 void startSnake(void *context);
-void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, struct Food *food, Object *map);
+void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, struct Food *food, Object *map, Scene *scene);
 void setSceneSnake(Scene *scene, Snake *snake);
 SHORT getAliveCount(Snake **snakes, SHORT snakeCount);
 void freeSnake(Snake **snakePtr);
