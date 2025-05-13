@@ -32,5 +32,7 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, struct Food *foo
 void setSceneSnake(Scene *scene, Snake *snake);
 SHORT getAliveCount(Snake **snakes, SHORT snakeCount);
 void freeSnake(Snake **snakePtr);
+void changeFocus(Snake **snakes, SHORT snakeCount, SHORT *focusOn);
+void changeFocusNear(Snake **snakes, SHORT snakeCount, SHORT *focusOn);
 
 #endif

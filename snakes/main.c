@@ -41,20 +41,6 @@ SHORT aliveCount = 0;
 SHORT focusOn = 0;
 Food *food = NULL;
 
-void changeFocus(void)
-{
-    SHORT tmp = focusOn;
-    do
-    {
-        tmp++;
-        if (tmp >= snakeCount)
-            tmp = 0;
-    } while (snakes[tmp]->alive == false && tmp != focusOn);
-    snakes[focusOn]->focus = false;
-    focusOn = tmp;
-    snakes[focusOn]->focus = true;
-}
-
 void handleInputEvent(InputEvent e)
 {
     Direction dir = DIR_NONE;
@@ -67,7 +53,7 @@ void handleInputEvent(InputEvent e)
     else if (e.vkdCode == 'S' || e.vkdCode == VK_DOWN)
         dir = DIR_DOWN;
     else if (e.vkdCode == 'G' && !snakes[0]->alive)
-        changeFocus();
+        changeFocus(snakes, snakeCount, &focusOn);
     else if (e.vkdCode == 'P')
     {
         if (snakes[0]->alive)
@@ -108,7 +94,7 @@ void setCamera(void)
     // 镜头延迟切换
     if (count > 15)
     {
-        changeFocus();
+        changeFocusNear(snakes, snakeCount, &focusOn);
         count = 0;
     }
 

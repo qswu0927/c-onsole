@@ -377,3 +377,46 @@ void freeSnake(Snake **snakePtr)
     free(snake);
     *snakePtr = NULL;
 }
+
+void changeFocus(Snake **snakes, SHORT snakeCount, SHORT *focusOn)
+{
+    SHORT tmp = *focusOn;
+    do
+    {
+        tmp++;
+        if (tmp >= snakeCount)
+            tmp = 0;
+    } while (snakes[tmp]->alive == false && tmp != *focusOn);
+    snakes[*focusOn]->focus = false;
+    *focusOn = tmp;
+    snakes[*focusOn]->focus = true;
+}
+
+// 切换到距离最近的蛇
+void changeFocusNear(Snake **snakes, SHORT snakeCount, SHORT *focusOn)
+{
+    SHORT tmp = *focusOn;
+    int min = INT_MAX;
+    Node *current = snakes[*focusOn]->tail;
+    while (current->next != NULL)
+        current = current->next;
+    for (SHORT i = 0; i < snakeCount; i++)
+    {
+        if (i == *focusOn)
+            continue;
+        if (snakes[i]->alive == false)
+            continue;
+        Node *node = snakes[i]->tail;
+        while (node->next != NULL)
+            node = node->next;
+        int dist = (current->x - node->x) * (current->x - node->x) + (current->y - node->y) * (current->y - node->y);
+        if (dist < min)
+        {
+            min = dist;
+            tmp = i;
+        }
+    }
+    snakes[*focusOn]->focus = false;
+    *focusOn = tmp;
+    snakes[*focusOn]->focus = true;
+}
