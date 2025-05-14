@@ -114,7 +114,7 @@ void autoDir(Snake **snakes, SHORT snakeCount, SHORT index, Object *map, Food *f
                 x++;
 
             // 判断撞墙
-            if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
+            if (map->data[y][x] != 0)
             {
                 dirWeight[i] -= r;
                 break;
@@ -254,7 +254,7 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
     else
     {
         // 判断撞墙
-        if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
+        if (map->data[y][x] != 0)
             snakes[index]->alive = false;
 
         // 判断撞到自己
