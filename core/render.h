@@ -89,11 +89,11 @@ void clearSceneP(Scene *scene, SHORT x, SHORT y, SHORT w, SHORT h);
 Scene *newScene(SHORT w, SHORT h);
 void renderScene(Scene *scene);
 void freeScene(Scene **scenePtr);
+void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...);
 RenderMode changeSceneMode(Scene *scene);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
 void rotateObject(Object *obj);
 void freeObject(Object **objPtr);
-void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...);
 // int getKb(void);
 void getInput(InputCallback callback);
 

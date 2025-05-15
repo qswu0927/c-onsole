@@ -273,87 +273,6 @@ void freeScene(Scene **scenePtr)
     *scenePtr = NULL;
 }
 
-RenderMode changeSceneMode(Scene *scene)
-{
-    if (!scene->mode)
-        scene->mode = RM_BG;
-    if (scene->mode & RM_V)
-    {
-        scene->mode ^= RM_V;
-        scene->mode <<= 1;
-        if (scene->mode >= RM_V)
-            scene->mode = RM_BG;
-    }
-    else
-        scene->mode |= RM_V;
-    return scene->mode;
-}
-
-Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
-{
-    Object *obj = (Object *)malloc(sizeof(Object));
-    obj->x = x;
-    obj->y = y;
-    obj->w = w;
-    obj->h = h;
-    obj->vx = 0;
-    obj->vy = 0;
-    obj->status = 0;
-    obj->next = NULL;
-    obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
-    for (SHORT i = 0; i < h; i++)
-    {
-        obj->data[i] = (CHAR *)malloc(obj->w * sizeof(CHAR));
-    }
-    return obj;
-}
-
-void rotateObject(Object *obj)
-{
-    SHORT w = obj->w;
-    SHORT h = obj->h;
-    CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
-    for (SHORT i = 0; i < w; i++)
-    {
-        rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
-    }
-
-    rotate90Clockwise(h, w, obj->data, rotatedData);
-
-    // 释放原数据
-    for (SHORT i = 0; i < h; i++)
-    {
-        free(obj->data[i]);
-    }
-    free(obj->data);
-
-    obj->data = rotatedData;
-    obj->w = h;
-    obj->h = w;
-}
-
-void freeObject(Object **objPtr)
-{
-    if (!objPtr || !*objPtr)
-        return;
-
-    Object *obj = *objPtr;
-    if (obj->data)
-    {
-        for (SHORT i = 0; i < obj->h; i++)
-        {
-            if (obj->data[i])
-            {
-                free(obj->data[i]);
-            }
-        }
-        free(obj->data);
-    }
-    free(obj);
-    // 通过双重指针参数置空调用方的指针
-    *objPtr = NULL;
-}
-
 void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...)
 {
     // 使用可变参数列表来格式化字符串
@@ -431,6 +350,85 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
     }
 
     free(wbuffer);
+}
+
+RenderMode changeSceneMode(Scene *scene)
+{
+    if (!scene->mode)
+        scene->mode = RM_BG;
+    if (scene->mode & RM_V)
+    {
+        scene->mode ^= RM_V;
+        scene->mode <<= 1;
+        if (scene->mode >= RM_V)
+            scene->mode = RM_BG;
+    }
+    else
+        scene->mode |= RM_V;
+    return scene->mode;
+}
+
+Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
+{
+    Object *obj = (Object *)malloc(sizeof(Object));
+    obj->x = x;
+    obj->y = y;
+    obj->w = w;
+    obj->h = h;
+    obj->vx = 0;
+    obj->vy = 0;
+    obj->status = 0;
+    obj->next = NULL;
+    obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
+    for (SHORT i = 0; i < h; i++)
+    {
+        obj->data[i] = (CHAR *)malloc(obj->w * sizeof(CHAR));
+    }
+    return obj;
+}
+
+void rotateObject(Object *obj)
+{
+    SHORT w = obj->w;
+    SHORT h = obj->h;
+    CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
+    for (SHORT i = 0; i < w; i++)
+    {
+        rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
+    }
+
+    rotate90Clockwise(h, w, obj->data, rotatedData);
+
+    // 释放原数据
+    for (SHORT i = 0; i < h; i++)
+    {
+        free(obj->data[i]);
+    }
+    free(obj->data);
+
+    obj->data = rotatedData;
+    obj->w = h;
+    obj->h = w;
+}
+
+void freeObject(Object **objPtr)
+{
+    if (!objPtr || !*objPtr)
+        return;
+
+    Object *obj = *objPtr;
+    if (obj->data)
+    {
+        for (SHORT i = 0; i < obj->h; i++)
+        {
+            if (obj->data[i])
+                free(obj->data[i]);
+        }
+        free(obj->data);
+    }
+    free(obj);
+    // 通过双重指针参数置空调用方的指针
+    *objPtr = NULL;
 }
 
 /* int getKb(void)
