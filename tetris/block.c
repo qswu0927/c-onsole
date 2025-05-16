@@ -124,6 +124,12 @@ bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
 COORD canRotate(Object *block, Object *map, CHAR **rotatedData)
 {
     Object *rotatedBlock = newObject(block->x, block->y, block->h, block->w);
+    if (rotatedBlock->data)
+    {
+        for (SHORT i = 0; i < rotatedBlock->h; i++)
+            free(rotatedBlock->data[i]);
+        free(rotatedBlock->data);
+    }
     rotatedBlock->data = rotatedData;
     if (!isCollided(rotatedBlock, map, 0, 0))
         return (COORD){0, 0};
