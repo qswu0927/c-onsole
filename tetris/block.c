@@ -79,12 +79,12 @@ Object *newBlock(SHORT x, SHORT y)
     if (rand() % (lastDockH > 12 ? 12 : (lastDockH < 3 ? 3 : lastDockH)) ==
         0)
         block->status = B_BOMB;
-    for (int i = 0; i < BLOCK_HEIGHT; i++)
-        for (int j = 0; j < BLOCK_WIDTH; j++)
+    for (SHORT i = 0; i < BLOCK_HEIGHT; i++)
+        for (SHORT j = 0; j < BLOCK_WIDTH; j++)
             block->data[i][j] = TETROMINOS[index][i][j];
 
     // 随机旋转
-    for (int i = 0; i < rand() % 4; i++)
+    for (SHORT i = 0; i < rand() % 4; i++)
         rotateObject(block);
 
     return block;
@@ -93,18 +93,18 @@ Object *newBlock(SHORT x, SHORT y)
 // 获取最靠左点X
 SHORT getBlockX(Object *block)
 {
-    for (int j = 0; j < block->w; j++)
-        for (int i = 0; i < block->h; i++)
+    for (SHORT j = 0; j < block->w; j++)
+        for (SHORT i = 0; i < block->h; i++)
             if (block->data[i][j])
                 return j + block->x;
     return -1;
 }
 
-bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
+bool isCollided(Object *block, Object *map, SHORT offsetX, SHORT offsetY)
 {
-    for (int i = 0; i < block->h; i++)
+    for (SHORT i = 0; i < block->h; i++)
     {
-        for (int j = 0; j < block->w; j++)
+        for (SHORT j = 0; j < block->w; j++)
         {
             if (block->data[i][j])
             {
@@ -123,32 +123,44 @@ bool isCollided(Object *block, Object *map, int offsetX, int offsetY)
 
 COORD canRotate(Object *block, Object *map, CHAR **rotatedData)
 {
-    Object *rotatedBlock = newObject(block->x, block->y, block->h, block->w);
-    if (rotatedBlock->data)
-    {
-        for (SHORT i = 0; i < rotatedBlock->h; i++)
-            free(rotatedBlock->data[i]);
-        free(rotatedBlock->data);
-    }
-    rotatedBlock->data = rotatedData;
+    Object *rotatedBlock = newObjectWithData(block->x, block->y, block->h, block->w,
+                                             rotatedData);
+
     if (!isCollided(rotatedBlock, map, 0, 0))
+    {
+        free(rotatedBlock);
         return (COORD){0, 0};
+    }
 
     // 墙踢（Wall Kick）：当旋转后碰到墙壁或障碍物时，系统会尝试微调方块位置以允许旋转
     for (short offset = 1; offset <= rotatedBlock->w / 2; offset++)
     {
         if (!isCollided(rotatedBlock, map, -offset, 0))
+        {
+            free(rotatedBlock);
             return (COORD){-offset, 0};
+        }
         if (!isCollided(rotatedBlock, map, offset, 0))
+        {
+            free(rotatedBlock);
             return (COORD){offset, 0};
+        }
     }
     for (short offset = 1; offset <= rotatedBlock->h / 2; offset++)
     {
         if (!isCollided(rotatedBlock, map, 0, -offset))
+        {
+            free(rotatedBlock);
             return (COORD){0, -offset};
+        }
         if (!isCollided(rotatedBlock, map, 0, offset))
+        {
+            free(rotatedBlock);
             return (COORD){0, offset};
+        }
     }
+
+    free(rotatedBlock);
     return (COORD){-1, -1};
 }
 
@@ -157,7 +169,7 @@ void rotateBlock(Object *block, Object *map)
     SHORT w = block->w;
     SHORT h = block->h;
     CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
-    for (int i = 0; i < w; i++)
+    for (SHORT i = 0; i < w; i++)
     {
         rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
     }
@@ -168,14 +180,14 @@ void rotateBlock(Object *block, Object *map)
     if (offset.X == -1 && offset.Y == -1)
     {
         // 不能旋转，释放内存
-        for (int k = 0; k < w; k++)
+        for (SHORT k = 0; k < w; k++)
             free(rotatedData[k]);
         free(rotatedData);
         return;
     }
 
     // 释放原数据
-    for (int i = 0; i < h; i++)
+    for (SHORT i = 0; i < h; i++)
         free(block->data[i]);
     free(block->data);
 

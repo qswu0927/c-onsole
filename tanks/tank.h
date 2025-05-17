@@ -5,6 +5,8 @@
 #include "../core/util.h"
 #include "../core/render.h"
 
+#define TANK_HEIGHT 3
+#define TANK_WIDTH 3
 #define SPEED_L 6
 #define SPEED_H 15
 
@@ -20,13 +22,14 @@ typedef struct Tank
     Direction setDir;
     SHORT speed;
     SHORT tick;
+    SHORT shells;
     bool alive;
     int score;
     bool npc;
     bool focus;
 } Tank;
 
-Tank *newTank(Object *map, bool npc);
+Tank *newTank(Object *map, Scene *scene, bool npc);
 void updateTank(Tank **tanks, SHORT tankCount, SHORT index, struct Shell *shell, Object *map, Scene *scene);
 void setSceneTank(Scene *scene, Tank *tank);
 SHORT getAliveCount(Tank **tanks, SHORT tankCount);

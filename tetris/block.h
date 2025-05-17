@@ -26,7 +26,7 @@ wchar_t *getBlockCh(SHORT index, Scene *scene);
 Rgb getBlockColor(SHORT index, Scene *scene);
 Object *newBlock(SHORT x, SHORT y);
 SHORT getBlockX(Object *block);
-bool isCollided(Object *block, Object *map, int offsetX, int offsetY);
+bool isCollided(Object *block, Object *map, SHORT offsetX, SHORT offsetY);
 void rotateBlock(Object *block, Object *map);
 DWORD WINAPI explodeBlock(LPVOID lpParam);
 void updateBlock(Object *block, Object *map);

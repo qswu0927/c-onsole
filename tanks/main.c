@@ -72,13 +72,10 @@ void handleInputEvent(InputEvent e)
     else if (e.vkdCode == VK_ESCAPE)
         status = S_QUIT;
 
-    if (status & S_READY && tanks[0]->alive && dir != DIR_NONE && (tanks[0]->dir + 2) % 4 != dir /* 不允许原地掉头 */)
+    if (status & S_READY && tanks[0]->alive && dir != DIR_NONE)
     {
         if (tanks[0]->setDir != dir)
-        {
             tanks[0]->setDir = dir;
-            // playSoundSeq(3, 300, 5, 0);
-        }
         tanks[0]->speed = SPEED_H;
     }
 
@@ -170,6 +167,7 @@ int main(void)
 
 START:
     status = S_READY;
+    initMap(map);
     if (tanks)
     {
         for (SHORT i = 0; i < tankCount; i++)
@@ -178,7 +176,8 @@ START:
     }
     tanks = (Tank **)malloc(sizeof(Tank *) * tankCount);
     for (SHORT i = 0; i < tankCount; i++)
-        tanks[i] = newTank(map, i > 0);
+        tanks[i] = NULL;
+    tanks[0] = newTank(map, scene, false);
     focusOn = 0;
 
     if (shell)
@@ -187,8 +186,6 @@ START:
 
     // 开场音乐
     playSoundSeq(9, 300, 50, 20, 400, 100, 20, 300, 50, 20);
-
-    initMap(map);
 
     fr = newFrameRate(12);
     while (status != S_QUIT)

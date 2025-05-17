@@ -4,61 +4,93 @@
 #include "../core/music.h"
 #include "shell.h"
 
-Tank *newTank(Object *map, bool npc)
+const SHORT TANKSHAPE[TANK_HEIGHT][TANK_WIDTH] = {{0, 1, 0}, {2, 4, 2}, {3, 0, 3}};
+
+Tank *newTank(Object *map, Scene *scene, bool npc)
 {
-    SHORT x = rand() % (map->w - 2) + 1;
-    SHORT y = rand() % (map->h - 2) + 1;
-    Direction dir = rand() % 4;
-    if (dir == DIR_UP)
-        y = map->h - 1;
-    else if (dir == DIR_DOWN)
-        y = 0;
-    else if (dir == DIR_LEFT)
-        x = map->w - 1;
-    else if (dir == DIR_RIGHT)
-        x = 0;
+    SHORT x0, y0;
+    while (true)
+    {
+        x0 = rand() % (map->w - TANK_WIDTH + 1);
+        y0 = rand() % (map->h - TANK_HEIGHT + 1);
+        bool valid = true;
+        for (SHORT y = y0; y < y0 + TANK_HEIGHT; y++)
+        {
+            for (SHORT x = x0; x < x0 + TANK_WIDTH; x++)
+            {
+                if (map->data[y][x] != 0)
+                {
+                    valid = false;
+                    break;
+                }
+                // NPC刷新在视野外
+                if (npc && x0 >= scene->camera.x && x0 < scene->camera.x + scene->camera.w && y0 >= scene->camera.y && y0 < scene->camera.y + scene->camera.h)
+                {
+                    valid = false;
+                    break;
+                }
+            }
+            if (!valid)
+                break;
+        }
+        if (valid)
+            break;
+    }
 
     Tank *tank = (Tank *)malloc(sizeof(Tank));
-    tank->x = x;
-    tank->y = y;
-    tank->w = 3;
-    tank->h = 3;
+    tank->x = x0;
+    tank->y = y0;
+    tank->w = TANK_WIDTH;
+    tank->h = TANK_HEIGHT;
     tank->data = (CHAR **)malloc(tank->h * sizeof(CHAR *));
-    for (SHORT i = 0; i < tank->h; i++)
+    for (SHORT y = 0; y < tank->h; y++)
     {
-        tank->data[i] = (CHAR *)malloc(tank->w * sizeof(CHAR));
-        for (SHORT j = 0; j < tank->w; j++)
-            tank->data[i][j] = i == 0 && j != 1 ? 0 : 1;
+        tank->data[y] = (CHAR *)malloc(tank->w * sizeof(CHAR));
+        for (SHORT x = 0; x < tank->w; x++)
+            tank->data[y][x] = TANKSHAPE[y][x];
     }
-    tank->dir = dir;
-    tank->setDir = dir;
+    tank->dir = DIR_UP;
+    tank->setDir = DIR_UP;
     tank->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
     tank->tick = 0;
     tank->alive = true;
     tank->score = 0;
     tank->npc = npc;
     tank->focus = false;
-    // 玩家
     if (!npc)
     {
-        dir = DIR_RIGHT;
-        x = map->w / 2;
-        y = map->h / 2;
-        tank->dir = DIR_NONE;
-        tank->setDir = DIR_NONE;
         tank->speed = SPEED_L;
         tank->focus = true;
     }
     return tank;
 }
 
-bool isTankCollided(Tank *tank1, Tank *tank2)
+bool isMapCollided(Tank *tank, Object *map)
 {
-    for (SHORT y1 = 0; y1 < tank1->h; y1++)
+    for (SHORT y = 0; y < tank->h; y++)
     {
-        for (SHORT x1 = 0; x1 < tank1->w; x1++)
+        for (SHORT x = 0; x < tank->w; x++)
         {
-            if (tank1->data[y1][x1] == 0)
+            if (tank->data[y][x] == 0)
+                continue;
+            if (tank->x + x < map->x || tank->x + x >= map->x + map->w || tank->y + y < map->y || tank->y + y >= map->y + map->h)
+                continue;
+            if (map->data[tank->y + y][tank->x + x] != 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool isTankCollided(Tank *tank, Tank *tank2)
+{
+    if (tank == NULL || tank2 == NULL)
+        return false;
+    for (SHORT y = 0; y < tank->h; y++)
+    {
+        for (SHORT x = 0; x < tank->w; x++)
+        {
+            if (tank->data[y][x] == 0)
                 continue;
             for (SHORT y2 = 0; y2 < tank2->h; y2++)
             {
@@ -66,13 +98,74 @@ bool isTankCollided(Tank *tank1, Tank *tank2)
                 {
                     if (tank2->data[y2][x2] == 0)
                         continue;
-                    if (tank1->x + x1 == tank2->x + x2 && tank1->y + y1 == tank2->y + y2)
+                    if (tank->x + x == tank2->x + x2 && tank->y + y == tank2->y + y2)
                         return true;
                 }
             }
         }
     }
     return false;
+}
+
+bool isCollided(Tank **tanks, SHORT tankCount, SHORT index, Object *map)
+{
+    for (SHORT i = 0; i < tankCount; i++)
+    {
+        if (i == index)
+            continue;
+        if (isTankCollided(tanks[index], tanks[i]))
+            return true;
+    }
+    return isMapCollided(tanks[index], map);
+}
+
+bool canRotate(Tank **tanks, SHORT tankCount, SHORT index, Object *map, CHAR **rotatedData)
+{
+    if (!isCollided(tanks, tankCount, index, map))
+        return true;
+
+    // 墙踢（Wall Kick）：当旋转后碰到墙壁或障碍物时，系统会尝试微调方块位置以允许旋转
+    for (short offset = 1; offset <= tanks[index]->w / 2; offset++)
+    {
+        tanks[index]->x -= offset;
+        if (!isCollided(tanks, tankCount, index, map))
+            return true;
+        tanks[index]->x += 2 * offset;
+        if (!isCollided(tanks, tankCount, index, map))
+            return true;
+        tanks[index]->x -= offset;
+    }
+    for (short offset = 1; offset <= tanks[index]->h / 2; offset++)
+    {
+        tanks[index]->y -= offset;
+        if (!isCollided(tanks, tankCount, index, map))
+            return true;
+        tanks[index]->y += 2 * offset;
+        if (!isCollided(tanks, tankCount, index, map))
+            return true;
+        tanks[index]->y -= offset;
+    }
+    return false;
+}
+
+void rotateTank(Tank *tank, Object *map)
+{
+    SHORT w = tank->w;
+    SHORT h = tank->h;
+    CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
+    for (SHORT i = 0; i < w; i++)
+        rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
+
+    rotate90Clockwise(h, w, tank->data, rotatedData);
+
+    // 释放原数据
+    for (int i = 0; i < h; i++)
+        free(tank->data[i]);
+    free(tank->data);
+
+    tank->data = rotatedData;
+    tank->w = h;
+    tank->h = w;
 }
 
 void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *shell)
@@ -89,56 +182,41 @@ void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *she
     // 大概率保持当前方向
     shuffle(dirs, rand() % 10 == 0 ? 4 : 3);
 
-    for (SHORT i = 2; i >= 0; i--)
+    SHORT x = tanks[index]->x;
+    SHORT y = tanks[index]->y;
+    for (SHORT i = 3; i >= 0; i--)
     {
         Direction dir = dirs[i];
 
         dirWeight[i] = 0;
-        SHORT x = tanks[index]->x;
-        SHORT y = tanks[index]->y;
+        tanks[index]->x = x;
+        tanks[index]->y = y;
         // 探测深度
         for (SHORT r = 5; r > 0; r--)
         {
             if (dir == DIR_UP)
-                y--;
+                tanks[index]->y--;
             else if (dir == DIR_DOWN)
-                y++;
+                tanks[index]->y++;
             else if (dir == DIR_LEFT)
-                x--;
+                tanks[index]->x--;
             else if (dir == DIR_RIGHT)
-                x++;
+                tanks[index]->x++;
 
-            // 判断撞墙
-            if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
-            {
-                dirWeight[i] -= r;
-                break;
-            }
-
-            bool hit = false;
-            // 判断撞到其他玩家
-            for (SHORT j = 0; j < tankCount; j++)
-            {
-                if (j == index)
-                    continue;
-                if (tanks[j]->alive == false)
-                    continue;
-                hit = isTankCollided(tanks[index], tanks[j]);
-                if (hit)
-                    break;
-            }
-            if (hit)
+            if (isCollided(tanks, tankCount, index, map))
             {
                 dirWeight[i] -= r;
                 break;
             }
         }
     }
+    tanks[index]->x = x;
+    tanks[index]->y = y;
 
     // 取权重最大的方向
-    SHORT maxWeight = dirWeight[2];
-    SHORT maxIndex = 2;
-    for (SHORT i = 1; i >= 0; i--)
+    SHORT maxWeight = dirWeight[3];
+    SHORT maxIndex = 3;
+    for (SHORT i = 2; i >= 0; i--)
     {
         if (dirWeight[i] > maxWeight)
         {
@@ -151,8 +229,20 @@ void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *she
 
 void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object *map, Scene *scene)
 {
+    if (!tanks[index])
+    {
+        if (rand() % 20 == 0)
+        {
+            tanks[index] = newTank(map, scene, true);
+        }
+        else
+            return;
+    }
     if (!tanks[index]->alive)
+    {
+        freeTank(&tanks[index]);
         return;
+    }
 
     if (tanks[index]->npc)
         autoDir(tanks, tankCount, index, map, shell);
@@ -163,6 +253,14 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object
             return;
 
     tanks[index]->tick = 0;
+    if (tanks[index]->dir != tanks[index]->setDir)
+    {
+        SHORT rotateTimes = tanks[index]->setDir - tanks[index]->dir;
+        if (rotateTimes < 0)
+            rotateTimes += 4;
+        for (SHORT i = 0; i < rotateTimes; i++)
+            rotateTank(tanks[index], map);
+    }
     tanks[index]->dir = tanks[index]->setDir;
 
     if (tanks[index]->dir == DIR_NONE)
@@ -171,53 +269,84 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object
     SHORT x = tanks[index]->x;
     SHORT y = tanks[index]->y;
     if (tanks[index]->dir == DIR_UP)
-        y--;
+        tanks[index]->y--;
     else if (tanks[index]->dir == DIR_DOWN)
-        y++;
+        tanks[index]->y++;
     else if (tanks[index]->dir == DIR_LEFT)
-        x--;
+        tanks[index]->x--;
     else if (tanks[index]->dir == DIR_RIGHT)
-        x++;
+        tanks[index]->x++;
 
-    // 判断撞墙
-    if (x <= 0 || x >= map->w - 1 || y <= 0 || y >= map->h - 1)
-        tanks[index]->alive = false;
-
-    // 判断撞到其他玩家
-    for (SHORT j = 0; j < tankCount; j++)
-    {
-        if (j == index)
-            continue;
-        if (tanks[j]->alive == false)
-            continue;
-        tanks[index]->alive = !isTankCollided(tanks[index], tanks[j]);
-        if (!tanks[index]->alive)
-            break;
-    }
-
-    if (tanks[index]->alive)
+    if (isCollided(tanks, tankCount, index, map))
     {
         tanks[index]->x = x;
         tanks[index]->y = y;
     }
-    else
+
+    // if (!tanks[index]->alive)
+    // {
+    //     playSoundSeq(3, tanks[index]->npc ? 350 : 450, 100, 0);
+    //     tanks[index]->focus = false;
+    // }
+}
+
+wchar_t *getTankCh(Scene *scene, SHORT data)
+{
+    if (scene->mode & RM_BG)
+        return _wcsdup(L"  ");
+    if (scene->mode & RM_CH)
     {
-        playSoundSeq(3, tanks[index]->npc ? 350 : 450, 100, 0);
-        tanks[index]->focus = false;
+        switch (data)
+        {
+        case 1:
+            return _wcsdup(L"炮");
+        case 2:
+            return _wcsdup(L"坦");
+        case 3:
+            return _wcsdup(L"克");
+        default:
+            return _wcsdup(L"士");
+        }
+    }
+    switch (data)
+    {
+    case 1:
+        return _wcsdup(L"🚩");
+        // return _wcsdup(L"😄额👮‍♂️👷‍♂️👷‍♀️👩‍🚒👳‍♂️👩👶😲😳🙊发⚙🧱⚙🔋🚌🚖🚩🚍");
+    case 2:
+        return _wcsdup(L"🚖");
+    case 3:
+        return _wcsdup(L"👩");
+    default:
+        return _wcsdup(L"😲");
     }
 }
 
-// wchar_t *getHeadCh(Scene *scene)
-// {
-//     if (scene->mode & RM_BG)
-//         return _wcsdup(L"  ");
-//     if (scene->mode & RM_CH)
-//         return _wcsdup(L"  ");
-//     return _wcsdup(L"🤢");
-// }
+Rgb getTankRgb(Scene *scene, SHORT data)
+{
+    if (scene->mode & RM_BG)
+        return Rgbb(40, 120, 0);
+    if (scene->mode & RM_CH)
+    {
+        switch (data)
+        {
+        case 1:
+            return Rgb(147, 112, 219);
+        case 2:
+            return Rgb(0, 128, 0);
+        case 3:
+            return Rgb(0, 191, 255);
+        default:
+            return Rgb(190, 190, 190);
+        }
+    }
+    return Rgb(255, 165, 0);
+}
 
 void setSceneTank(Scene *scene, Tank *tank)
 {
+    if (tank == NULL)
+        return;
     if (tank->alive == false)
         return;
     for (SHORT y = 0; y < tank->h; y++)
@@ -228,8 +357,8 @@ void setSceneTank(Scene *scene, Tank *tank)
                 continue;
             if (tank->x + x < scene->camera.x || tank->x + x >= scene->camera.x + scene->camera.w || tank->y + y < scene->camera.y || tank->y + y >= scene->camera.y + scene->camera.h)
                 continue;
-            scene->buffer[tank->y + y][tank->x + x].ch = getShellCh(scene, tank->data[y][x]);
-            Rgb color = getShellRgb(scene, tank->data[y][x]);
+            scene->buffer[tank->y + y][tank->x + x].ch = getTankCh(scene, tank->data[y][x]);
+            Rgb color = getTankRgb(scene, tank->data[y][x]);
             if (tank->npc)
                 color.br |= 0x99;
             else
@@ -245,7 +374,7 @@ SHORT getAliveCount(Tank **tanks, SHORT tankCount)
 {
     SHORT count = 0;
     for (SHORT i = 0; i < tankCount; i++)
-        if (tanks[i]->alive)
+        if (tanks[i] && tanks[i]->alive)
             count++;
     return count;
 }

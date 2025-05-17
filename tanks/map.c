@@ -5,21 +5,21 @@
 
 void initMap(Object *map)
 {
-    for (SHORT i = 0; i < map->h; i++)
-        for (SHORT j = 0; j < map->w; j++)
-            map->data[i][j] = 1;
+    for (SHORT y = 0; y < map->h; y++)
+        for (SHORT x = 0; x < map->w; x++)
+            map->data[y][x] = 1;
     // 随机生成一些空白区域
-    for (SHORT i = 0; i < 10; i++)
+    for (SHORT t = 0; t < 30; t++)
     {
-        SHORT x = rand() % map->w;
-        SHORT y = rand() % map->h;
-        for (SHORT y0 = y - map->h / 4; y0 <= y + map->h / 4; y0++)
+        SHORT x0 = rand() % map->w;
+        SHORT y0 = rand() % map->h;
+        for (SHORT y = y0 - map->h / 8; y <= y0 + map->h / 8; y++)
         {
-            for (SHORT x0 = x - map->w / 6; x0 <= x + map->w / 6; x0++)
+            for (SHORT x = x0 - map->w / 8; x <= x0 + map->w / 8; x++)
             {
-                if (y0 <= 0 || y0 >= map->h - 1 || x0 <= 0 || x0 >= map->w - 1)
+                if (y <= 0 || y >= map->h - 1 || x <= 0 || x >= map->w - 1)
                     continue;
-                map->data[y0][x0] = 0;
+                map->data[y][x] = 0;
             }
         }
     }

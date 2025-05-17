@@ -12,9 +12,9 @@
 typedef enum
 {
     DIR_UP,
-    DIR_LEFT,
-    DIR_DOWN,
     DIR_RIGHT,
+    DIR_DOWN,
+    DIR_LEFT,
     DIR_NONE
 } Direction;
 

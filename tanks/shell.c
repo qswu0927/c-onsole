@@ -38,11 +38,11 @@ wchar_t *getShellCh(Scene *scene, SHORT data)
     switch (data)
     {
     case 0:
-        return _wcsdup(L"🍎");
+        return _wcsdup(L"🎇");
     case 1:
-        return _wcsdup(L"🍖");
+        return _wcsdup(L"🚀");
     case 2:
-        return _wcsdup(L"🍉");
+        return _wcsdup(L"🔥");
     default:
         return _wcsdup(L"🍄");
     }

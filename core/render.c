@@ -368,7 +368,7 @@ RenderMode changeSceneMode(Scene *scene)
     return scene->mode;
 }
 
-Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
+Object *newObjectWithData(SHORT x, SHORT y, SHORT w, SHORT h, CHAR **data)
 {
     Object *obj = (Object *)malloc(sizeof(Object));
     obj->x = x;
@@ -379,11 +379,16 @@ Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
     obj->vy = 0;
     obj->status = 0;
     obj->next = NULL;
+    obj->data = data;
+    return obj;
+}
+
+Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h)
+{
+    Object *obj = newObjectWithData(x, y, w, h, NULL);
     obj->data = (CHAR **)malloc(obj->h * sizeof(CHAR *));
     for (SHORT i = 0; i < h; i++)
-    {
         obj->data[i] = (CHAR *)malloc(obj->w * sizeof(CHAR));
-    }
     return obj;
 }
 
@@ -393,17 +398,13 @@ void rotateObject(Object *obj)
     SHORT h = obj->h;
     CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
     for (SHORT i = 0; i < w; i++)
-    {
         rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
-    }
 
     rotate90Clockwise(h, w, obj->data, rotatedData);
 
     // 释放原数据
     for (SHORT i = 0; i < h; i++)
-    {
         free(obj->data[i]);
-    }
     free(obj->data);
 
     obj->data = rotatedData;
@@ -420,10 +421,8 @@ void freeObject(Object **objPtr)
     if (obj->data)
     {
         for (SHORT i = 0; i < obj->h; i++)
-        {
             if (obj->data[i])
                 free(obj->data[i]);
-        }
         free(obj->data);
     }
     free(obj);

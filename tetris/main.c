@@ -105,7 +105,7 @@ void handleInputEvent(InputEvent e)
         if (currentPos.X != lastPos.X && currentPos.X < map->x + map->w)
         {
             lastPos = currentPos;
-            int offset = currentPos.X > getBlockX(block) ? 1 : -1;
+            SHORT offset = currentPos.X > getBlockX(block) ? 1 : -1;
             while (status == S_READY && !isCollided(block, map, offset, 0))
             {
                 if (currentPos.X == getBlockX(block))
