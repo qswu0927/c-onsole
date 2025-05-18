@@ -35,25 +35,13 @@ void fireShell(Shell **shellPtr, Tank *tank, Object *map, Scene *scene)
     newShell->damage = 20;
     newShell->owner = tank;
     if (tank->dir == DIR_UP)
-    {
         newShell->vy = -1;
-        newShell->y = tank->y;
-    }
     else if (tank->dir == DIR_DOWN)
-    {
         newShell->vy = 1;
-        newShell->y = tank->y + tank->h - 1;
-    }
     else if (tank->dir == DIR_LEFT)
-    {
         newShell->vx = -1;
-        newShell->x = tank->x;
-    }
     else if (tank->dir == DIR_RIGHT)
-    {
         newShell->vx = 1;
-        newShell->x = tank->x + tank->w - 1;
-    }
 
     newShell->next = shell;
     *shellPtr = newShell;
@@ -68,15 +56,11 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
     Object *map = params->map;
     Object *frags = NULL;
 
-    SHORT rowBegin = -1, rowEnd = 1, colBegin = -1, colEnd = 1;
-    if (shell->vx < 0)
-        colBegin = -2;
-    if (shell->vx > 0)
-        colEnd = 2;
-    if (shell->vy < 0)
-        rowBegin = -2;
-    if (shell->vy > 0)
-        rowEnd = 2;
+    // 伤害范围
+    SHORT rowBegin = shell->vy - 1;
+    SHORT rowEnd = shell->vy + 1;
+    SHORT colBegin = shell->vx - 1;
+    SHORT colEnd = shell->vx + 1;
 
     for (SHORT r = rowBegin; r <= rowEnd; r++)
     {
@@ -90,6 +74,9 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
             CHAR ch = -1;
             for (SHORT i = 0; i < tankCount; i++)
             {
+                // 不要击中自家
+                // if (shell->owner == tanks[i])
+                //     continue;
                 if (tanks[i]->health <= 0)
                     continue;
                 if (isTankHit(c0, r0, tanks[i]))
@@ -194,6 +181,9 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map)
         bool hit = false;
         for (SHORT i = 0; i < tankCount; i++)
         {
+            // 不要击中自家
+            if (node->owner == tanks[i])
+                continue;
             // 击中坦克
             if (isTankHit(node->x, node->y, tanks[i]))
             {
