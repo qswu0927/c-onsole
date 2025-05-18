@@ -1,0 +1,10 @@
+{
+  "files.associations": {
+    "*.css": "css",
+    "*.vue": "html",
+    "shell.h": "c",
+    "console.h": "c",
+    "map.h": "c",
+    "tank.h": "c"
+  }
+}

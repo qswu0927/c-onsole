@@ -3,6 +3,72 @@
 #include "../core/util.h"
 #include "../core/console.h"
 
+wchar_t *getCh(Scene *scene, SHORT data)
+{
+    if (scene->mode & RM_BG)
+        return _wcsdup(L"  ");
+    if (scene->mode & RM_CH)
+    {
+        switch (data)
+        {
+        case 0:
+            return _wcsdup(L"  ");
+        case 1:
+            return _wcsdup(L"墙");
+
+        case 10:
+            return _wcsdup(L"鸟");
+        case 11:
+            return _wcsdup(L"蛙");
+        case 12:
+            return _wcsdup(L"鱼");
+        case 13:
+            return _wcsdup(L"鼠");
+
+        case 30:
+            return _wcsdup(L"炮");
+        case 31:
+            return _wcsdup(L"坦");
+        case 32:
+            return _wcsdup(L"克");
+        case 33:
+            return _wcsdup(L"士");
+
+        default:
+            return _wcsdup(L"哈");
+        }
+    }
+    switch (data)
+    {
+    case 0:
+        return _wcsdup(L"  ");
+    case 1:
+        return _wcsdup(L"🚧");
+
+    case 10:
+        return _wcsdup(L"🎇");
+    case 11:
+        return _wcsdup(L"🚀");
+    case 12:
+        return _wcsdup(L"🔥");
+    case 13:
+        return _wcsdup(L"🍄");
+
+    case 30:
+        return _wcsdup(L"🚩");
+        // return _wcsdup(L"😄额👮‍♂️👷‍♂️👷‍♀️👩‍🚒👳‍♂️👩👶😲😳🙊发⚙🧱⚙🔋🚌🚖🚩🚍");
+    case 31:
+        return _wcsdup(L"🚖");
+    case 32:
+        return _wcsdup(L"👩");
+    case 33:
+        return _wcsdup(L"😲");
+
+    default:
+        return _wcsdup(L"😄");
+    }
+}
+
 void initMap(Object *map)
 {
     for (SHORT y = 0; y < map->h; y++)
@@ -25,17 +91,6 @@ void initMap(Object *map)
     }
 }
 
-wchar_t *getMapCh(RenderMode mode, CHAR data)
-{
-    if (data == 0)
-        return _wcsdup(L"  ");
-    if (mode & RM_BG)
-        return _wcsdup(L"  ");
-    if (mode & RM_CH)
-        return _wcsdup(L"墙");
-    return _wcsdup(L"🚧");
-}
-
 Rgb getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
 {
     Rgb rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
@@ -55,7 +110,7 @@ void setSceneMap(Scene *scene, Object *map)
     {
         for (SHORT j = 0; j < map->w; j++)
         {
-            scene->buffer[i + map->y][j + map->x].ch = getMapCh(scene->mode, map->data[i][j]);
+            scene->buffer[i + map->y][j + map->x].ch = getCh(scene, map->data[i][j]);
 
             scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(scene, map->data[i][j], i, j);
         }

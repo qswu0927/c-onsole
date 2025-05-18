@@ -52,11 +52,15 @@ void handleInputEvent(InputEvent e)
         dir = DIR_UP;
     else if (e.vkdCode == 'S' || e.vkdCode == VK_DOWN)
         dir = DIR_DOWN;
-    else if (e.vkdCode == 'G' && !tanks[0]->alive)
+    else if (e.vkdCode == VK_SPACE)
+    {
+        fireShell(&shell, tanks[0], map, scene);
+    }
+    else if (e.vkdCode == 'G' && tanks[0]->health <= 0)
         changeFocus(tanks, tankCount, &focusOn);
     else if (e.vkdCode == 'P')
     {
-        if (tanks[0]->alive)
+        if (tanks[0]->health > 0)
             status ^= S_READY | S_PAUSED;
         else
             status = S_RESTART;
@@ -72,7 +76,7 @@ void handleInputEvent(InputEvent e)
     else if (e.vkdCode == VK_ESCAPE)
         status = S_QUIT;
 
-    if (status & S_READY && tanks[0]->alive && dir != DIR_NONE)
+    if (status & S_READY && dir != DIR_NONE)
     {
         if (tanks[0]->setDir != dir)
             tanks[0]->setDir = dir;
@@ -80,13 +84,13 @@ void handleInputEvent(InputEvent e)
     }
 
     if (!e.kDown)
-        tanks[0]->speed = SPEED_L;
+        tanks[0]->speed = SPEED_0;
 }
 
 void setCamera(void)
 {
     static SHORT count = 0;
-    if (tanks[focusOn]->alive == false)
+    if (tanks[focusOn]->health <= 0)
         count++;
     // 镜头延迟切换
     if (count > 15)
@@ -120,19 +124,14 @@ void setMessage(void)
     static SHORT count = 0;
     if (count++ > 10)
         count = 0;
+    SHORT hScale = tanks[0]->health * 255 / TANK_MAX_HEALTH;
+    setSceneStr(scene, col, row++, Rgb(255 - hScale, hScale / 2, 0), "血  量: %5d", tanks[0]->health);
     setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", tanks[0]->score);
     setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
-    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "玩家: %d/%d", aliveCount, tankCount);
-    if (status & S_WIN)
-        setSceneStr(scene, col, row++, Rgb(200, count > 5 ? 200 : 255, 0), "恭喜，您已胜出😄");
-    else if (!tanks[0]->alive)
-    {
-        setSceneStr(scene, col, row++, Rgb(180, 50, 0), "哎呀，挑战失败😂");
+    if (tanks[0]->health <= 0)
         setSceneStr(scene, col, row++, Rgb(150, 150, count > 5 ? 150 : 255), "正在观战%d号，按G切换", focusOn);
-    }
-    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "方向控制: WASD|方向键");
-    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "加速: 长按上述键");
-    if (tanks[0]->alive == false)
+    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: WASD|方向键");
+    if (tanks[0]->health <= 0)
     {
         setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
     }
@@ -176,13 +175,11 @@ START:
     }
     tanks = (Tank **)malloc(sizeof(Tank *) * tankCount);
     for (SHORT i = 0; i < tankCount; i++)
-        tanks[i] = NULL;
-    tanks[0] = newTank(map, scene, false);
+        tanks[i] = newTank(map, scene, i > 0);
     focusOn = 0;
 
     if (shell)
         freeShell(&shell);
-    shell = newShell(map->w * map->h / 100);
 
     // 开场音乐
     playSoundSeq(9, 300, 50, 20, 400, 100, 20, 300, 50, 20);
@@ -202,11 +199,18 @@ START:
             {
                 updateTank(tanks, tankCount, i, shell, map, scene);
             }
-            updateShell(shell, tanks, tankCount, map);
+            updateShell(&shell, tanks, tankCount, map);
         }
 
         setCamera();
         setSceneMap(scene, map);
+        // 渲染爆炸碎片
+        Object *tmp = map->next;
+        while (tmp)
+        {
+            setSceneFrag(scene, tmp);
+            tmp = tmp->next;
+        }
         setSceneShell(scene, shell);
         for (SHORT i = 0; i < tankCount; i++)
             setSceneTank(scene, tanks[i]);
@@ -216,18 +220,6 @@ START:
 
         if (tanks[0]->score > config.maxScore)
             config.maxScore = tanks[0]->score;
-
-        aliveCount = getAliveCount(tanks, tankCount);
-        if ((status & S_WIN) == 0 && aliveCount == 1 && tanks[0]->alive)
-        {
-            status |= S_WIN;
-            // 胜利音乐
-            playSoundSeq(12,
-                         523, 200, 50, // C5 (Do)
-                         587, 200, 50, // D5 (Re)
-                         659, 200, 50, // E5 (Mi)
-                         784, 400, 0);
-        }
 
         frameEnd(&fr);
     }

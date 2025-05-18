@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include "../core/console.h"
 #include "../core/music.h"
+#include "map.h"
 #include "shell.h"
 
 const SHORT TANKSHAPE[TANK_HEIGHT][TANK_WIDTH] = {{0, 1, 0}, {2, 4, 2}, {3, 0, 3}};
@@ -23,11 +24,23 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
                     valid = false;
                     break;
                 }
-                // NPC刷新在视野外
-                if (npc && x0 >= scene->camera.x && x0 < scene->camera.x + scene->camera.w && y0 >= scene->camera.y && y0 < scene->camera.y + scene->camera.h)
+                if (x >= scene->camera.x && x < scene->camera.x + scene->camera.w && y >= scene->camera.y && y < scene->camera.y + scene->camera.h)
                 {
-                    valid = false;
-                    break;
+                    // NPC刷新在视野外
+                    if (npc)
+                    {
+                        valid = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    // 玩家刷新在视野内
+                    if (!npc)
+                    {
+                        valid = false;
+                        break;
+                    }
                 }
             }
             if (!valid)
@@ -53,13 +66,14 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
     tank->setDir = DIR_UP;
     tank->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
     tank->tick = 0;
-    tank->alive = true;
+    tank->health = TANK_MAX_HEALTH;
     tank->score = 0;
+    tank->killBy = NULL;
     tank->npc = npc;
     tank->focus = false;
     if (!npc)
     {
-        tank->speed = SPEED_L;
+        tank->speed = SPEED_0;
         tank->focus = true;
     }
     return tank;
@@ -84,8 +98,9 @@ bool isMapCollided(Tank *tank, Object *map)
 
 bool isTankCollided(Tank *tank, Tank *tank2)
 {
-    if (tank == NULL || tank2 == NULL)
+    if (tank->health <= 0 || tank2->health <= 0)
         return false;
+
     for (SHORT y = 0; y < tank->h; y++)
     {
         for (SHORT x = 0; x < tank->w; x++)
@@ -229,23 +244,21 @@ void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *she
 
 void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object *map, Scene *scene)
 {
-    if (!tanks[index])
+    if (tanks[index]->health <= 0 && tanks[index]->npc)
     {
-        if (rand() % 20 == 0)
+        if (rand() % 100 == 0)
         {
+            freeTank(&tanks[index]);
             tanks[index] = newTank(map, scene, true);
         }
-        else
-            return;
-    }
-    if (!tanks[index]->alive)
-    {
-        freeTank(&tanks[index]);
         return;
     }
 
     if (tanks[index]->npc)
         autoDir(tanks, tankCount, index, map, shell);
+
+    if (tanks[index]->speed == SPEED_0)
+        return;
 
     if (tanks[index]->tick++ < 12 / tanks[index]->speed)
         // 玩家方向变了，需要立即更新，避免输入延迟
@@ -282,44 +295,6 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object
         tanks[index]->x = x;
         tanks[index]->y = y;
     }
-
-    // if (!tanks[index]->alive)
-    // {
-    //     playSoundSeq(3, tanks[index]->npc ? 350 : 450, 100, 0);
-    //     tanks[index]->focus = false;
-    // }
-}
-
-wchar_t *getTankCh(Scene *scene, SHORT data)
-{
-    if (scene->mode & RM_BG)
-        return _wcsdup(L"  ");
-    if (scene->mode & RM_CH)
-    {
-        switch (data)
-        {
-        case 1:
-            return _wcsdup(L"炮");
-        case 2:
-            return _wcsdup(L"坦");
-        case 3:
-            return _wcsdup(L"克");
-        default:
-            return _wcsdup(L"士");
-        }
-    }
-    switch (data)
-    {
-    case 1:
-        return _wcsdup(L"🚩");
-        // return _wcsdup(L"😄额👮‍♂️👷‍♂️👷‍♀️👩‍🚒👳‍♂️👩👶😲😳🙊发⚙🧱⚙🔋🚌🚖🚩🚍");
-    case 2:
-        return _wcsdup(L"🚖");
-    case 3:
-        return _wcsdup(L"👩");
-    default:
-        return _wcsdup(L"😲");
-    }
 }
 
 Rgb getTankRgb(Scene *scene, SHORT data)
@@ -345,9 +320,7 @@ Rgb getTankRgb(Scene *scene, SHORT data)
 
 void setSceneTank(Scene *scene, Tank *tank)
 {
-    if (tank == NULL)
-        return;
-    if (tank->alive == false)
+    if (tank->health <= 0)
         return;
     for (SHORT y = 0; y < tank->h; y++)
     {
@@ -357,7 +330,7 @@ void setSceneTank(Scene *scene, Tank *tank)
                 continue;
             if (tank->x + x < scene->camera.x || tank->x + x >= scene->camera.x + scene->camera.w || tank->y + y < scene->camera.y || tank->y + y >= scene->camera.y + scene->camera.h)
                 continue;
-            scene->buffer[tank->y + y][tank->x + x].ch = getTankCh(scene, tank->data[y][x]);
+            scene->buffer[tank->y + y][tank->x + x].ch = getCh(scene, tank->data[y][x]);
             Rgb color = getTankRgb(scene, tank->data[y][x]);
             if (tank->npc)
                 color.br |= 0x99;
@@ -370,19 +343,8 @@ void setSceneTank(Scene *scene, Tank *tank)
     }
 }
 
-SHORT getAliveCount(Tank **tanks, SHORT tankCount)
-{
-    SHORT count = 0;
-    for (SHORT i = 0; i < tankCount; i++)
-        if (tanks[i] && tanks[i]->alive)
-            count++;
-    return count;
-}
-
 void freeTank(Tank **tankPtr)
 {
-    if (tankPtr == NULL || *tankPtr == NULL)
-        return;
     Tank *tank = *tankPtr;
     for (SHORT i = 0; i < tank->h; i++)
         if (tank->data[i])
@@ -400,7 +362,7 @@ void changeFocus(Tank **tanks, SHORT tankCount, SHORT *focusOn)
         tmp++;
         if (tmp >= tankCount)
             tmp = 0;
-    } while (tanks[tmp]->alive == false && tmp != *focusOn);
+    } while (tanks[tmp]->health <= 0 && tmp != *focusOn);
     tanks[*focusOn]->focus = false;
     *focusOn = tmp;
     tanks[*focusOn]->focus = true;
@@ -414,7 +376,7 @@ void changeFocusNear(Tank **tanks, SHORT tankCount, SHORT *focusOn)
     {
         if (i == *focusOn)
             continue;
-        if (tanks[i]->alive == false)
+        if (tanks[i]->health <= 0)
             continue;
         int dist = (tanks[*focusOn]->x - tanks[i]->x) * (tanks[*focusOn]->x - tanks[i]->x) + (tanks[*focusOn]->y - tanks[i]->y) * (tanks[*focusOn]->y - tanks[i]->y);
         if (dist < min)

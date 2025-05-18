@@ -285,7 +285,7 @@ DWORD WINAPI explodeBlock(LPVOID lpParam)
         map->next = frags;
         Sleep(80);
     }
-
+    free(params);
     return 0;
 }
 
@@ -301,7 +301,7 @@ void updateBlock(Object *block, Object *map)
             // 炸弹
             if (block->status == B_BOMB)
             {
-                ExplodeParams *params = (ExplodeParams *)malloc(sizeof(SoundParams));
+                ExplodeParams *params = (ExplodeParams *)malloc(sizeof(ExplodeParams));
                 params->block = block;
                 params->map = map;
                 HANDLE hThread = CreateThread(NULL, 0, explodeBlock, params, 0, NULL);
