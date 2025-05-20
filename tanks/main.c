@@ -28,7 +28,6 @@ typedef struct
 } Config;
 Config config = {.mode = RM_CH, .fontSize = 18, .mute = false, .maxScore = 0};
 
-FrameRate fr;
 SHORT w = 25, h = 25;
 SHORT messageW = 15;
 Status status = S_START;
@@ -80,11 +79,10 @@ void handleInputEvent(InputEvent e)
     {
         if (tanks[0]->setDir != dir)
             tanks[0]->setDir = dir;
-        tanks[0]->speed = SPEED_H;
+        tanks[0]->interMs = 120;
     }
-
-    if (!e.kDown)
-        tanks[0]->speed = SPEED_0;
+    else if (!e.kDown && e.vkCode != VK_SPACE)
+        tanks[0]->interMs = INT_MAX;
 }
 
 void setCamera(void)
@@ -166,7 +164,7 @@ int main(void)
 
 START:
     status = S_READY;
-    initMap(map);
+    initMap(map, tanks, tankCount, scene);
     if (tanks)
     {
         for (SHORT i = 0; i < tankCount; i++)
@@ -195,9 +193,10 @@ START:
 
         if (status & S_READY)
         {
+            updateMap(map, tanks, tankCount, scene, true);
             for (SHORT i = 0; i < tankCount; i++)
             {
-                updateTank(tanks, tankCount, i, shell, map, scene);
+                updateTank(tanks, tankCount, i, &shell, map, scene);
             }
             updateShell(&shell, tanks, tankCount, map);
         }

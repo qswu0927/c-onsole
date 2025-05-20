@@ -5,7 +5,28 @@
 #include "map.h"
 #include "shell.h"
 
-const SHORT TANKSHAPE[TANK_HEIGHT][TANK_WIDTH] = {{0, 1, 0}, {2, 4, 2}, {3, 0, 3}};
+const SHORT TANKSHAPE[TANK_HEIGHT][TANK_WIDTH] = {{0, 30, 0}, {31, 30, 31}, {32, 0, 32}};
+
+void rotateTank(Tank *tank)
+{
+    SHORT w = tank->w;
+    SHORT h = tank->h;
+    CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
+    for (SHORT i = 0; i < w; i++)
+        rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
+
+    rotate90Clockwise(h, w, tank->data, rotatedData);
+
+    // 释放原数据
+    for (int i = 0; i < h; i++)
+        free(tank->data[i]);
+    free(tank->data);
+
+    tank->data = rotatedData;
+    tank->w = h;
+    tank->h = w;
+    tank->dir = ++tank->dir % 4;
+}
 
 Tank *newTank(Object *map, Scene *scene, bool npc)
 {
@@ -36,11 +57,11 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
                 else
                 {
                     // 玩家刷新在视野内
-                    if (!npc)
-                    {
-                        valid = false;
-                        break;
-                    }
+                    // if (!npc)
+                    // {
+                    //     valid = false;
+                    //     break;
+                    // }
                 }
             }
             if (!valid)
@@ -63,9 +84,8 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
             tank->data[y][x] = TANKSHAPE[y][x];
     }
     tank->dir = DIR_UP;
-    tank->setDir = DIR_UP;
-    tank->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
-    tank->tick = 0;
+    tank->interMs = rand() % 2000;
+    tank->lastQpc = 0;
     tank->health = TANK_MAX_HEALTH;
     tank->score = 0;
     tank->killBy = NULL;
@@ -73,9 +93,13 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
     tank->focus = false;
     if (!npc)
     {
-        tank->speed = SPEED_0;
+        tank->interMs = INT_MAX;
         tank->focus = true;
     }
+    // 随机旋转
+    for (SHORT r = 0; r < rand() % 4; r++)
+        rotateTank(tank);
+    tank->setDir = tank->dir;
     return tank;
 }
 
@@ -134,7 +158,7 @@ bool isCollided(Tank **tanks, SHORT tankCount, SHORT index, Object *map)
     return isMapCollided(tanks[index], map);
 }
 
-bool canRotate(Tank **tanks, SHORT tankCount, SHORT index, Object *map, CHAR **rotatedData)
+bool canRotate(Tank **tanks, SHORT tankCount, SHORT index, Object *map)
 {
     if (!isCollided(tanks, tankCount, index, map))
         return true;
@@ -163,27 +187,7 @@ bool canRotate(Tank **tanks, SHORT tankCount, SHORT index, Object *map, CHAR **r
     return false;
 }
 
-void rotateTank(Tank *tank, Object *map)
-{
-    SHORT w = tank->w;
-    SHORT h = tank->h;
-    CHAR **rotatedData = (CHAR **)malloc(w * sizeof(CHAR *));
-    for (SHORT i = 0; i < w; i++)
-        rotatedData[i] = (CHAR *)malloc(h * sizeof(CHAR));
-
-    rotate90Clockwise(h, w, tank->data, rotatedData);
-
-    // 释放原数据
-    for (int i = 0; i < h; i++)
-        free(tank->data[i]);
-    free(tank->data);
-
-    tank->data = rotatedData;
-    tank->w = h;
-    tank->h = w;
-}
-
-void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *shell)
+void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Object *map, Scene *scene)
 {
     if (tanks[index]->dir == DIR_NONE)
         tanks[index]->dir = rand() % 4;
@@ -191,9 +195,9 @@ void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *she
     Direction dirs[4];
     SHORT dirWeight[4];
     dirs[3] = tanks[index]->dir;
-    dirs[2] = (dirs[2] + 1) % 4;
-    dirs[1] = (dirs[2] + 2) % 4;
-    dirs[0] = (dirs[2] + 3) % 4;
+    dirs[2] = (dirs[3] + 1) % 4;
+    dirs[1] = (dirs[3] + 2) % 4;
+    dirs[0] = (dirs[3] + 3) % 4;
     // 大概率保持当前方向
     shuffle(dirs, rand() % 10 == 0 ? 4 : 3);
 
@@ -218,10 +222,19 @@ void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *she
             else if (dir == DIR_RIGHT)
                 tanks[index]->x++;
 
-            if (isCollided(tanks, tankCount, index, map))
+            // if (isMapCollided(tanks[index], map))
+            // {
+            //     dirWeight[i] -= r;
+            //     break;
+            // }
+            for (SHORT i = 0; i < tankCount; i++)
             {
-                dirWeight[i] -= r;
-                break;
+                if (i == index)
+                    continue;
+                if (isTankCollided(tanks[index], tanks[i]))
+                {
+                    // dirWeight[i] += r;
+                }
             }
         }
     }
@@ -240,9 +253,11 @@ void autoDir(Tank **tanks, SHORT tankCount, SHORT index, Object *map, Shell *she
         }
     }
     tanks[index]->setDir = dirs[maxIndex];
+    if (rand() % 30 == 0)
+        fireShell(shellPtr, tanks[index], map, scene);
 }
 
-void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object *map, Scene *scene)
+void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Object *map, Scene *scene)
 {
     if (tanks[index]->health <= 0 && tanks[index]->npc)
     {
@@ -255,45 +270,43 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell *shell, Object
     }
 
     if (tanks[index]->npc)
-        autoDir(tanks, tankCount, index, map, shell);
-
-    if (tanks[index]->speed == SPEED_0)
-        return;
-
-    if (tanks[index]->tick++ < 12 / tanks[index]->speed)
-        // 玩家方向变了，需要立即更新，避免输入延迟
-        if (tanks[index]->npc || tanks[index]->dir == tanks[index]->setDir)
-            return;
-
-    tanks[index]->tick = 0;
-    if (tanks[index]->dir != tanks[index]->setDir)
-    {
-        SHORT rotateTimes = tanks[index]->setDir - tanks[index]->dir;
-        if (rotateTimes < 0)
-            rotateTimes += 4;
-        for (SHORT i = 0; i < rotateTimes; i++)
-            rotateTank(tanks[index], map);
-    }
-    tanks[index]->dir = tanks[index]->setDir;
-
-    if (tanks[index]->dir == DIR_NONE)
-        return;
+        autoPilot(tanks, tankCount, index, shellPtr, map, scene);
 
     SHORT x = tanks[index]->x;
     SHORT y = tanks[index]->y;
-    if (tanks[index]->dir == DIR_UP)
-        tanks[index]->y--;
-    else if (tanks[index]->dir == DIR_DOWN)
-        tanks[index]->y++;
-    else if (tanks[index]->dir == DIR_LEFT)
-        tanks[index]->x--;
-    else if (tanks[index]->dir == DIR_RIGHT)
-        tanks[index]->x++;
-
-    if (isCollided(tanks, tankCount, index, map))
+    Direction dir = tanks[index]->dir;
+    if (tanks[index]->dir != tanks[index]->setDir)
     {
-        tanks[index]->x = x;
-        tanks[index]->y = y;
+        while (tanks[index]->dir != tanks[index]->setDir)
+            rotateTank(tanks[index]);
+        if (!canRotate(tanks, tankCount, index, map))
+        {
+            // 转回来
+            while (tanks[index]->dir != dir)
+                rotateTank(tanks[index]);
+            tanks[index]->x = x;
+            tanks[index]->y = y;
+            tanks[index]->setDir = tanks[index]->dir;
+        }
+    }
+    else if ((double)(fr.start.QuadPart - tanks[index]->lastQpc) * 1000.0 / fr.frequency.QuadPart > tanks[index]->interMs)
+    {
+        tanks[index]->lastQpc = fr.start.QuadPart;
+
+        if (tanks[index]->dir == DIR_UP)
+            tanks[index]->y--;
+        else if (tanks[index]->dir == DIR_DOWN)
+            tanks[index]->y++;
+        else if (tanks[index]->dir == DIR_LEFT)
+            tanks[index]->x--;
+        else if (tanks[index]->dir == DIR_RIGHT)
+            tanks[index]->x++;
+
+        if (isCollided(tanks, tankCount, index, map))
+        {
+            tanks[index]->x = x;
+            tanks[index]->y = y;
+        }
     }
 }
 

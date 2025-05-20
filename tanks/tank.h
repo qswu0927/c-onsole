@@ -8,9 +8,6 @@
 #define TANK_HEIGHT 3
 #define TANK_WIDTH 3
 #define TANK_MAX_HEALTH 99
-#define SPEED_0 0
-#define SPEED_L 6
-#define SPEED_H 15
 
 struct Shell;
 
@@ -21,8 +18,10 @@ typedef struct Tank
     CHAR **data;
     Direction dir;
     Direction setDir;
-    SHORT speed;
-    SHORT tick;
+    // 更新间隔毫秒数，用于控制速度
+    int interMs;
+    // 上次更新时的计时器计数值
+    LONGLONG lastQpc;
     SHORT shells;
     int health;
     int score;
@@ -32,7 +31,7 @@ typedef struct Tank
 } Tank;
 
 Tank *newTank(Object *map, Scene *scene, bool npc);
-void updateTank(Tank **tanks, SHORT tankCount, SHORT index, struct Shell *shell, Object *map, Scene *scene);
+void updateTank(Tank **tanks, SHORT tankCount, SHORT index, struct Shell **shellPtr, Object *map, Scene *scene);
 void setSceneTank(Scene *scene, Tank *tank);
 void freeTank(Tank **tankPtr);
 void changeFocus(Tank **tanks, SHORT tankCount, SHORT *focusOn);

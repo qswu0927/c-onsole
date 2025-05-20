@@ -3,6 +3,8 @@
 #include "../core/util.h"
 #include "../core/render.h"
 
+#define SHELL_MAX_DAMAGE 25
+
 struct Tank;
 
 typedef struct Shell

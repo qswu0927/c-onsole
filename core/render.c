@@ -4,6 +4,8 @@
 #include "util.h"
 #include "console.h"
 
+FrameRate fr;
+
 FrameRate newFrameRate(SHORT fps)
 {
     FrameRate fr = {.fps = fps};
@@ -32,9 +34,7 @@ void frameEnd(FrameRate *fr)
     // 计算需要睡眠的时间
     double sleepTime = (1000.0 / fr->fps) - fr->elapsedMs;
     if (sleepTime > 0)
-    {
         Sleep(sleepTime);
-    }
 
     // 重新获取时间计算实际帧时间(包括睡眠)
     QueryPerformanceCounter(&fr->end);

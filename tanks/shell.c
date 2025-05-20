@@ -5,34 +5,16 @@
 #include "map.h"
 #include "tank.h"
 
-bool isTankHit(SHORT x0, SHORT y0, Tank *tank)
-{
-    if (tank->health <= 0)
-        return false;
-
-    for (SHORT y = 0; y < tank->h; y++)
-    {
-        for (SHORT x = 0; x < tank->w; x++)
-        {
-            if (tank->data[y][x] == 0)
-                continue;
-            if (tank->x + x == x0 && tank->y + y == y0)
-                return true;
-        }
-    }
-    return false;
-}
-
 void fireShell(Shell **shellPtr, Tank *tank, Object *map, Scene *scene)
 {
     Shell *shell = *shellPtr;
     Shell *newShell = (Shell *)malloc(sizeof(Shell));
     newShell->x = tank->x + tank->w / 2;
     newShell->y = tank->y + tank->h / 2;
-    newShell->data = 1;
+    newShell->data = 10;
     newShell->vx = 0;
     newShell->vy = 0;
-    newShell->damage = 20;
+    newShell->damage = SHELL_MAX_DAMAGE;
     newShell->owner = tank;
     if (tank->dir == DIR_UP)
         newShell->vy = -1;
@@ -118,21 +100,10 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
             }
         }
     }
+    SHORT dScale = shell->damage * 300 / SHELL_MAX_DAMAGE;
+    playSoundSeq(3,
+                 200 + dScale, 5, 0);
     free(shell);
-    playSoundSeq(10 * 3,
-                 // 中高频起始
-                 350, 30, 0,
-                 300, 30, 0,
-                 250, 30, 0,
-                 200, 30, 0,
-                 150, 30, 0,
-                 100, 30, 0,
-                 // 爆炸冲击波主体
-                 80, 100, 0, // 低频轰隆声
-                 60, 150, 0, // 更低的余震
-                 // 爆炸结束的"火花"声
-                 120, 40, 0,
-                 200, 30, 0);
 
     while (frags)
     {

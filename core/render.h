@@ -28,6 +28,8 @@ typedef struct
     double elapsedMs;
 } FrameRate;
 
+extern FrameRate fr;
+
 /**
  * 渲染模式
  */
