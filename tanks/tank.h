@@ -7,7 +7,6 @@
 
 #define TANK_HEIGHT 3
 #define TANK_WIDTH 3
-#define TANK_MAX_HEALTH 99
 
 struct Shell;
 
@@ -23,7 +22,8 @@ typedef struct Tank
     // 上次更新时的计时器计数值
     LONGLONG lastQpc;
     SHORT shells;
-    int health;
+    SHORT maxHealth;
+    SHORT health;
     int score;
     struct Tank *killBy;
     bool npc;

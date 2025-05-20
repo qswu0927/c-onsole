@@ -41,24 +41,24 @@ void frameEnd(FrameRate *fr)
     fr->elapsedMs = (double)(fr->end.QuadPart - fr->start.QuadPart) * 1000.0 / fr->frequency.QuadPart;
 }
 
-void mixColor(Rgb *dest, Rgb *src, double alpha)
+void mixColor(Rgb *dest, Rgb src, double alpha)
 {
-    dest->r = (u_char)(dest->r * (1 - alpha) + src->r * alpha);
-    dest->g = (u_char)(dest->g * (1 - alpha) + src->g * alpha);
-    dest->b = (u_char)(dest->b * (1 - alpha) + src->b * alpha);
-    dest->br = (u_char)(dest->br * (1 - alpha) + src->br * alpha);
-    dest->bg = (u_char)(dest->bg * (1 - alpha) + src->bg * alpha);
-    dest->bb = (u_char)(dest->bb * (1 - alpha) + src->bb * alpha);
+    dest->r = (u_char)(dest->r * (1 - alpha) + src.r * alpha);
+    dest->g = (u_char)(dest->g * (1 - alpha) + src.g * alpha);
+    dest->b = (u_char)(dest->b * (1 - alpha) + src.b * alpha);
+    dest->br = (u_char)(dest->br * (1 - alpha) + src.br * alpha);
+    dest->bg = (u_char)(dest->bg * (1 - alpha) + src.bg * alpha);
+    dest->bb = (u_char)(dest->bb * (1 - alpha) + src.bb * alpha);
 }
 
-void orColor(Rgb *dest, Rgb *src)
+void orColor(Rgb *dest, Rgb src)
 {
-    dest->r |= src->r;
-    dest->g |= src->g;
-    dest->b |= src->b;
-    dest->br |= src->br;
-    dest->bg |= src->bg;
-    dest->bb |= src->bb;
+    dest->r |= src.r;
+    dest->g |= src.g;
+    dest->b |= src.b;
+    dest->br |= src.br;
+    dest->bg |= src.bg;
+    dest->bb |= src.bb;
 }
 
 WORD rgb2attr(Rgb rgb)
@@ -336,7 +336,7 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
             scene->buffer[y][x].ch[1] = L'\0';
         }
 
-        orColor(&scene->buffer[y][x].color.rgb, &rgb);
+        orColor(&scene->buffer[y][x].color.rgb, rgb);
         x++;
     }
 
@@ -346,7 +346,7 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
         scene->buffer[y][x].ch = (wchar_t *)malloc(2 * sizeof(wchar_t));
         scene->buffer[y][x].ch[0] = L' ';
         scene->buffer[y][x].ch[1] = L'\0';
-        orColor(&scene->buffer[y][x].color.rgb, &rgb);
+        orColor(&scene->buffer[y][x].color.rgb, rgb);
     }
 
     free(wbuffer);

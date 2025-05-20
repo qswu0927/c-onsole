@@ -5,7 +5,7 @@
 #include "map.h"
 #include "tank.h"
 
-void fireShell(Shell **shellPtr, Tank *tank, Object *map, Scene *scene)
+void fireShell(Shell **shellPtr, Tank *tank)
 {
     Shell *shell = *shellPtr;
     Shell *newShell = (Shell *)malloc(sizeof(Shell));
@@ -56,9 +56,6 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
             CHAR ch = -1;
             for (SHORT i = 0; i < tankCount; i++)
             {
-                // 不要击中自家
-                // if (shell->owner == tanks[i])
-                //     continue;
                 if (tanks[i]->health <= 0)
                     continue;
                 if (isTankHit(c0, r0, tanks[i]))
@@ -68,7 +65,6 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
                     if (tanks[i]->health <= 0)
                     {
                         tanks[i]->health = 0;
-                        // playSoundSeq(3, tanks[i]->npc ? 350 : 450, 100, 0);
                         tanks[i]->focus = false;
                         tanks[i]->killBy = shell->owner;
                     }
@@ -100,9 +96,6 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
             }
         }
     }
-    SHORT dScale = shell->damage * 300 / SHELL_MAX_DAMAGE;
-    playSoundSeq(3,
-                 200 + dScale, 5, 0);
     free(shell);
 
     while (frags)
@@ -114,7 +107,7 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
             f->x += f->vx;
             f->y += f->vy;
             f->status++;
-            if ((f->vx == 0 && f->vy == 0) || f->status > 5 || f->x <= map->x || f->x >= map->x + map->w - 1 || f->y <= map->y || f->y >= map->y + map->h - 1 || map->data[f->y][f->x] > 0)
+            if ((f->vx == 0 && f->vy == 0) || f->status > 5 || f->x <= map->x || f->x >= map->x + map->w - 1 || f->y <= map->y || f->y >= map->y + map->h - 1 /* || map->data[f->y][f->x] > 0 */)
             {
                 if (fp == NULL)
                 {
@@ -140,14 +133,13 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
     return 0;
 }
 
-void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map)
+void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map, Scene *scene)
 {
     Shell *shell = *shellPtr;
     for (Shell *node = shell, *prev = NULL; node != NULL;)
     {
         node->x += node->vx;
         node->y += node->vy;
-        node->damage--;
 
         bool hit = false;
         for (SHORT i = 0; i < tankCount; i++)
@@ -159,6 +151,9 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map)
             if (isTankHit(node->x, node->y, tanks[i]))
             {
                 hit = true;
+                // 玩家炮弹或击中玩家或在视野范围才播放音效
+                if (!tanks[i]->npc || !node->owner->npc || (node->x >= scene->camera.x && node->x < scene->camera.x + scene->camera.w && node->y >= scene->camera.y && node->y < scene->camera.y + scene->camera.h))
+                    playSoundSeq(3, 200 + shell->damage * 300 / SHELL_MAX_DAMAGE, 5, 0);
                 break;
             }
         }
@@ -167,8 +162,11 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map)
             node->y > map->y && node->y < map->y + map->h - 1 && map->data[node->y][node->x] != 0)
         {
             hit = true;
+            // 玩家炮弹或在视野范围才播放音效
+            if (!node->owner->npc || (node->x >= scene->camera.x && node->x < scene->camera.x + scene->camera.w && node->y >= scene->camera.y && node->y < scene->camera.y + scene->camera.h))
+                playSoundSeq(3, 220, 10, 0);
         }
-        if (hit && node->damage > 0)
+        if (hit)
         {
             ExplodeParams *params = (ExplodeParams *)malloc(sizeof(ExplodeParams));
             params->shell = node;
@@ -179,6 +177,8 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map)
             if (hThread)
                 CloseHandle(hThread);
         }
+
+        node->damage--;
         // 删除炮弹
         if (hit || node->damage <= 0 || node->x <= map->x || node->x >= map->x + map->w - 1 ||
             node->y <= map->y || node->y >= map->y + map->h - 1 || map->data[node->y][node->x] != 0)
@@ -230,7 +230,7 @@ void setSceneShell(Scene *scene, Shell *shell)
     for (Shell *node = shell; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getCh(scene, node->data);
-        scene->buffer[node->y][node->x].color.rgb = getShellRgb(scene, node->data);
+        orColor(&scene->buffer[node->y][node->x].color.rgb, getShellRgb(scene, node->data));
     }
 }
 
@@ -239,7 +239,7 @@ void setSceneFrag(Scene *scene, Object *frag)
     for (Object *node = frag; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getCh(scene, node->data[0][0]);
-        scene->buffer[node->y][node->x].color.rgb = getShellRgb(scene, node->data[0][0]);
+        orColor(&scene->buffer[node->y][node->x].color.rgb, getShellRgb(scene, node->data[0][0]));
     }
 }
 

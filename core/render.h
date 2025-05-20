@@ -84,8 +84,8 @@ typedef struct Object
 FrameRate newFrameRate(SHORT fps);
 void frameStart(FrameRate *fr);
 void frameEnd(FrameRate *fr);
-void mixColor(Rgb *dest, Rgb *src, double alpha);
-void orColor(Rgb *dest, Rgb *src);
+void mixColor(Rgb *dest, Rgb src, double alpha);
+void orColor(Rgb *dest, Rgb src);
 void clearScene(Scene *scene);
 void clearSceneP(Scene *scene, SHORT x, SHORT y, SHORT w, SHORT h);
 Scene *newScene(SHORT w, SHORT h);

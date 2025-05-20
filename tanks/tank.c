@@ -86,7 +86,7 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
     tank->dir = DIR_UP;
     tank->interMs = rand() % 2000;
     tank->lastQpc = 0;
-    tank->health = TANK_MAX_HEALTH;
+    tank->maxHealth = 100;
     tank->score = 0;
     tank->killBy = NULL;
     tank->npc = npc;
@@ -94,8 +94,10 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
     if (!npc)
     {
         tank->interMs = INT_MAX;
+        tank->maxHealth = 500;
         tank->focus = true;
     }
+    tank->health = tank->maxHealth;
     // 随机旋转
     for (SHORT r = 0; r < rand() % 4; r++)
         rotateTank(tank);
@@ -254,7 +256,7 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
     }
     tanks[index]->setDir = dirs[maxIndex];
     if (rand() % 30 == 0)
-        fireShell(shellPtr, tanks[index], map, scene);
+        fireShell(shellPtr, tanks[index]);
 }
 
 void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Object *map, Scene *scene)

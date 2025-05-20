@@ -53,7 +53,7 @@ void handleInputEvent(InputEvent e)
         dir = DIR_DOWN;
     else if (e.vkdCode == VK_SPACE)
     {
-        fireShell(&shell, tanks[0], map, scene);
+        fireShell(&shell, tanks[0]);
     }
     else if (e.vkdCode == 'G' && tanks[0]->health <= 0)
         changeFocus(tanks, tankCount, &focusOn);
@@ -122,12 +122,13 @@ void setMessage(void)
     static SHORT count = 0;
     if (count++ > 10)
         count = 0;
-    SHORT hScale = tanks[0]->health * 255 / TANK_MAX_HEALTH;
-    setSceneStr(scene, col, row++, Rgb(255 - hScale, hScale / 2, 0), "血  量: %5d", tanks[0]->health);
-    setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", tanks[0]->score);
-    setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
     if (tanks[0]->health <= 0)
         setSceneStr(scene, col, row++, Rgb(150, 150, count > 5 ? 150 : 255), "正在观战%d号，按G切换", focusOn);
+    SHORT hScale = tanks[focusOn]->health * 255 / tanks[focusOn]->maxHealth;
+    setSceneStr(scene, col, row++, Rgb(255 - hScale, hScale / 2, 0), "血  量: %5d", tanks[focusOn]->health);
+    setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", tanks[focusOn]->score);
+    if (tanks[0]->health > 0)
+        setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: WASD|方向键");
     if (tanks[0]->health <= 0)
     {
@@ -198,7 +199,7 @@ START:
             {
                 updateTank(tanks, tankCount, i, &shell, map, scene);
             }
-            updateShell(&shell, tanks, tankCount, map);
+            updateShell(&shell, tanks, tankCount, map, scene);
         }
 
         setCamera();
