@@ -79,36 +79,54 @@ void handleInputEvent(InputEvent e)
     {
         if (tanks[0]->setDir != dir)
             tanks[0]->setDir = dir;
-        tanks[0]->interMs = 120;
+        tanks[0]->interMoveMs = 120;
     }
     else if (!e.kDown && e.vkCode != VK_SPACE)
-        tanks[0]->interMs = INT_MAX;
+        tanks[0]->interMoveMs = INT_MAX;
 }
 
 void setCamera(void)
 {
+    static SHORT x = 0, y = 0;
     static SHORT count = 0;
     if (tanks[focusOn]->health <= 0)
         count++;
     // 镜头延迟切换
     if (count > 15)
     {
-        changeFocusNear(tanks, tankCount, &focusOn);
+        if (tanks[focusOn]->killerId >= 0 && tanks[tanks[focusOn]->killerId]->health > 0)
+        {
+            tanks[focusOn]->focus = false;
+            focusOn = tanks[focusOn]->killerId;
+            tanks[focusOn]->focus = true;
+        }
+        else
+            changeFocusNear(tanks, tankCount, &focusOn);
         count = 0;
     }
 
-    scene->camera.x = tanks[focusOn]->x - (scene->camera.w - messageW) / 2;
-    scene->camera.y = tanks[focusOn]->y - scene->camera.h / 2;
+    x = tanks[focusOn]->x - (scene->camera.w - messageW) / 2;
+    y = tanks[focusOn]->y - scene->camera.h / 2;
 
     // 限位
-    if (scene->camera.x + scene->camera.w > scene->w)
-        scene->camera.x = scene->w - scene->camera.w;
-    if (scene->camera.y + scene->camera.h > scene->h)
-        scene->camera.y = scene->h - scene->camera.h;
-    if (scene->camera.x < 0)
-        scene->camera.x = 0;
-    if (scene->camera.y < 0)
-        scene->camera.y = 0;
+    if (x + scene->camera.w > scene->w)
+        x = scene->w - scene->camera.w;
+    if (y + scene->camera.h > scene->h)
+        y = scene->h - scene->camera.h;
+    if (x < 0)
+        x = 0;
+    if (y < 0)
+        y = 0;
+
+    // 逐步移动到目标位置
+    if (scene->camera.x < x)
+        scene->camera.x++;
+    if (scene->camera.x > x)
+        scene->camera.x--;
+    if (scene->camera.y < y)
+        scene->camera.y++;
+    if (scene->camera.y > y)
+        scene->camera.y--;
 }
 
 void setMessage(void)
@@ -122,12 +140,13 @@ void setMessage(void)
     static SHORT count = 0;
     if (count++ > 10)
         count = 0;
-    if (tanks[0]->health <= 0)
+    if (tanks[focusOn]->npc)
         setSceneStr(scene, col, row++, Rgb(150, 150, count > 5 ? 150 : 255), "正在观战%d号，按G切换", focusOn);
     SHORT hScale = tanks[focusOn]->health * 255 / tanks[focusOn]->maxHealth;
     setSceneStr(scene, col, row++, Rgb(255 - hScale, hScale / 2, 0), "血  量: %5d", tanks[focusOn]->health);
+    setSceneStr(scene, col, row++, Rgb(120, 80, 60), "弹  药: %5d", tanks[focusOn]->shellCount);
     setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", tanks[focusOn]->score);
-    if (tanks[0]->health > 0)
+    if (!tanks[focusOn]->npc)
         setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: WASD|方向键");
     if (tanks[0]->health <= 0)
@@ -174,7 +193,7 @@ START:
     }
     tanks = (Tank **)malloc(sizeof(Tank *) * tankCount);
     for (SHORT i = 0; i < tankCount; i++)
-        tanks[i] = newTank(map, scene, i > 0);
+        tanks[i] = newTank(i, map, scene, i > 0);
     focusOn = 0;
 
     if (shell)

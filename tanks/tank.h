@@ -12,25 +12,31 @@ struct Shell;
 
 typedef struct Tank
 {
+    SHORT id;
     SHORT x, y;
     SHORT w, h;
     CHAR **data;
     Direction dir;
     Direction setDir;
-    // 更新间隔毫秒数，用于控制速度
-    int interMs;
-    // 上次更新时的计时器计数值
-    LONGLONG lastQpc;
-    SHORT shells;
+    // 移动间隔毫秒数，用于控制速度
+    int interMoveMs;
+    // 上次移动时的计时器计数值
+    LONGLONG lastMoveQpc;
+    SHORT maxShellCount;
+    SHORT shellCount;
+    // 装载每发炮弹用时毫秒数
+    int interLoadShellMs;
+    // 上次装载炮弹时的计时器计数值
+    LONGLONG lastLoadShellQpc;
     SHORT maxHealth;
     SHORT health;
     int score;
-    struct Tank *killBy;
+    SHORT killerId;
     bool npc;
     bool focus;
 } Tank;
 
-Tank *newTank(Object *map, Scene *scene, bool npc);
+Tank *newTank(SHORT id, Object *map, Scene *scene, bool npc);
 void updateTank(Tank **tanks, SHORT tankCount, SHORT index, struct Shell **shellPtr, Object *map, Scene *scene);
 void setSceneTank(Scene *scene, Tank *tank);
 void freeTank(Tank **tankPtr);

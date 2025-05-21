@@ -7,6 +7,9 @@
 
 void fireShell(Shell **shellPtr, Tank *tank)
 {
+    if (tank->shellCount <= 0)
+        return;
+
     Shell *shell = *shellPtr;
     Shell *newShell = (Shell *)malloc(sizeof(Shell));
     newShell->x = tank->x + tank->w / 2;
@@ -15,7 +18,7 @@ void fireShell(Shell **shellPtr, Tank *tank)
     newShell->vx = 0;
     newShell->vy = 0;
     newShell->damage = SHELL_MAX_DAMAGE;
-    newShell->owner = tank;
+    newShell->ownerId = tank->id;
     if (tank->dir == DIR_UP)
         newShell->vy = -1;
     else if (tank->dir == DIR_DOWN)
@@ -27,6 +30,9 @@ void fireShell(Shell **shellPtr, Tank *tank)
 
     newShell->next = shell;
     *shellPtr = newShell;
+
+    tank->shellCount--;
+    tank->lastLoadShellQpc = fr.start.QuadPart;
 }
 
 DWORD WINAPI explodeShell(LPVOID lpParam)
@@ -66,9 +72,9 @@ DWORD WINAPI explodeShell(LPVOID lpParam)
                     {
                         tanks[i]->health = 0;
                         tanks[i]->focus = false;
-                        tanks[i]->killBy = shell->owner;
+                        tanks[i]->killerId = shell->ownerId;
                     }
-                    shell->owner->score += shell->damage;
+                    tanks[shell->ownerId]->score += shell->damage;
                     break;
                 }
             }
@@ -145,14 +151,14 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map, S
         for (SHORT i = 0; i < tankCount; i++)
         {
             // 不要击中自家
-            if (node->owner == tanks[i])
+            if (node->ownerId == i)
                 continue;
             // 击中坦克
             if (isTankHit(node->x, node->y, tanks[i]))
             {
                 hit = true;
                 // 玩家炮弹或击中玩家或在视野范围才播放音效
-                if (!tanks[i]->npc || !node->owner->npc || (node->x >= scene->camera.x && node->x < scene->camera.x + scene->camera.w && node->y >= scene->camera.y && node->y < scene->camera.y + scene->camera.h))
+                if (!tanks[i]->npc || !tanks[node->ownerId]->npc || (node->x >= scene->camera.x && node->x < scene->camera.x + scene->camera.w && node->y >= scene->camera.y && node->y < scene->camera.y + scene->camera.h))
                     playSoundSeq(3, 200 + shell->damage * 300 / SHELL_MAX_DAMAGE, 5, 0);
                 break;
             }
@@ -163,7 +169,7 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map, S
         {
             hit = true;
             // 玩家炮弹或在视野范围才播放音效
-            if (!node->owner->npc || (node->x >= scene->camera.x && node->x < scene->camera.x + scene->camera.w && node->y >= scene->camera.y && node->y < scene->camera.y + scene->camera.h))
+            if (!tanks[node->ownerId]->npc || (node->x >= scene->camera.x && node->x < scene->camera.x + scene->camera.w && node->y >= scene->camera.y && node->y < scene->camera.y + scene->camera.h))
                 playSoundSeq(3, 220, 10, 0);
         }
         if (hit)

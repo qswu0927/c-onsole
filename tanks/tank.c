@@ -28,7 +28,7 @@ void rotateTank(Tank *tank)
     tank->dir = ++tank->dir % 4;
 }
 
-Tank *newTank(Object *map, Scene *scene, bool npc)
+Tank *newTank(SHORT id, Object *map, Scene *scene, bool npc)
 {
     SHORT x0, y0;
     while (true)
@@ -57,11 +57,11 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
                 else
                 {
                     // 玩家刷新在视野内
-                    // if (!npc)
-                    // {
-                    //     valid = false;
-                    //     break;
-                    // }
+                    if (!npc)
+                    {
+                        valid = false;
+                        break;
+                    }
                 }
             }
             if (!valid)
@@ -72,6 +72,7 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
     }
 
     Tank *tank = (Tank *)malloc(sizeof(Tank));
+    tank->id = id;
     tank->x = x0;
     tank->y = y0;
     tank->w = TANK_WIDTH;
@@ -84,19 +85,23 @@ Tank *newTank(Object *map, Scene *scene, bool npc)
             tank->data[y][x] = TANKSHAPE[y][x];
     }
     tank->dir = DIR_UP;
-    tank->interMs = rand() % 2000;
-    tank->lastQpc = 0;
+    tank->interMoveMs = rand() % 1000;
+    tank->lastMoveQpc = 0;
+    tank->interLoadShellMs = 1500;
+    tank->lastLoadShellQpc = 0;
+    tank->maxShellCount = 5;
     tank->maxHealth = 100;
     tank->score = 0;
-    tank->killBy = NULL;
+    tank->killerId = -1;
     tank->npc = npc;
     tank->focus = false;
     if (!npc)
     {
-        tank->interMs = INT_MAX;
+        tank->interMoveMs = INT_MAX;
         tank->maxHealth = 500;
         tank->focus = true;
     }
+    tank->shellCount = tank->maxShellCount;
     tank->health = tank->maxHealth;
     // 随机旋转
     for (SHORT r = 0; r < rand() % 4; r++)
@@ -196,6 +201,7 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
 
     Direction dirs[4];
     SHORT dirWeight[4];
+    SHORT fireWeight[4];
     dirs[3] = tanks[index]->dir;
     dirs[2] = (dirs[3] + 1) % 4;
     dirs[1] = (dirs[3] + 2) % 4;
@@ -210,10 +216,11 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
         Direction dir = dirs[i];
 
         dirWeight[i] = 0;
+        fireWeight[i] = 0;
         tanks[index]->x = x;
         tanks[index]->y = y;
         // 探测深度
-        for (SHORT r = 5; r > 0; r--)
+        for (SHORT r = 15; r > 0; r--)
         {
             if (dir == DIR_UP)
                 tanks[index]->y--;
@@ -224,18 +231,41 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
             else if (dir == DIR_RIGHT)
                 tanks[index]->x++;
 
-            // if (isMapCollided(tanks[index], map))
-            // {
-            //     dirWeight[i] -= r;
-            //     break;
-            // }
-            for (SHORT i = 0; i < tankCount; i++)
+            if (isMapCollided(tanks[index], map))
             {
-                if (i == index)
+                // dirWeight[i] -= r;
+                // break;
+            }
+            for (SHORT j = 0; j < tankCount; j++)
+            {
+                if (j == index)
                     continue;
-                if (isTankCollided(tanks[index], tanks[i]))
+                if (isTankCollided(tanks[index], tanks[j]))
                 {
-                    // dirWeight[i] += r;
+                    // if (r > 10)
+                    //     dirWeight[i] -= r;
+                    // else
+                    dirWeight[i] += r;
+                    fireWeight[i] += r;
+                    break;
+                }
+            }
+            for (Shell *node = *shellPtr; node != NULL; node = node->next)
+            {
+                if (node->ownerId == index)
+                    continue;
+                if (node->vx < 0 && node->x < tanks[index]->x)
+                    continue;
+                if (node->vx > 0 && node->x > tanks[index]->x)
+                    continue;
+                if (node->vy < 0 && node->y < tanks[index]->y)
+                    continue;
+                if (node->vy > 0 && node->y > tanks[index]->y)
+                    continue;
+                if (isTankHit(node->x, node->y, tanks[index]))
+                {
+                    // dirWeight[i] -= r;
+                    dirWeight[i] -= node->damage;
                 }
             }
         }
@@ -244,18 +274,25 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
     tanks[index]->y = y;
 
     // 取权重最大的方向
-    SHORT maxWeight = dirWeight[3];
-    SHORT maxIndex = 3;
+    SHORT maxDirWeight = dirWeight[3];
+    SHORT maxDirIndex = 3;
+    SHORT maxFireWeight = fireWeight[3];
+    SHORT maxFireIndex = 3;
     for (SHORT i = 2; i >= 0; i--)
     {
-        if (dirWeight[i] > maxWeight)
+        if (dirWeight[i] > maxDirWeight)
         {
-            maxWeight = dirWeight[i];
-            maxIndex = i;
+            maxDirWeight = dirWeight[i];
+            maxDirIndex = i;
+        }
+        if (fireWeight[i] > maxFireWeight)
+        {
+            maxFireWeight = fireWeight[i];
+            maxFireIndex = i;
         }
     }
-    tanks[index]->setDir = dirs[maxIndex];
-    if (rand() % 30 == 0)
+    tanks[index]->setDir = dirs[maxDirIndex];
+    if (maxFireIndex == maxDirIndex && maxFireWeight > 30)
         fireShell(shellPtr, tanks[index]);
 }
 
@@ -266,13 +303,19 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Ob
         if (rand() % 100 == 0)
         {
             freeTank(&tanks[index]);
-            tanks[index] = newTank(map, scene, true);
+            tanks[index] = newTank(index, map, scene, true);
         }
         return;
     }
 
     if (tanks[index]->npc)
         autoPilot(tanks, tankCount, index, shellPtr, map, scene);
+
+    if (tanks[index]->shellCount < tanks[index]->maxShellCount && (double)(fr.start.QuadPart - tanks[index]->lastLoadShellQpc) * 1000.0 / fr.frequency.QuadPart > tanks[index]->interLoadShellMs)
+    {
+        tanks[index]->shellCount++;
+        tanks[index]->lastLoadShellQpc = fr.start.QuadPart;
+    }
 
     SHORT x = tanks[index]->x;
     SHORT y = tanks[index]->y;
@@ -291,9 +334,9 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Ob
             tanks[index]->setDir = tanks[index]->dir;
         }
     }
-    else if ((double)(fr.start.QuadPart - tanks[index]->lastQpc) * 1000.0 / fr.frequency.QuadPart > tanks[index]->interMs)
+    else if ((double)(fr.start.QuadPart - tanks[index]->lastMoveQpc) * 1000.0 / fr.frequency.QuadPart > tanks[index]->interMoveMs)
     {
-        tanks[index]->lastQpc = fr.start.QuadPart;
+        tanks[index]->lastMoveQpc = fr.start.QuadPart;
 
         if (tanks[index]->dir == DIR_UP)
             tanks[index]->y--;

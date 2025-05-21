@@ -12,7 +12,7 @@ typedef struct Shell
     SHORT x, y;
     SHORT vx, vy;
     SHORT data;
-    struct Tank *owner;
+    SHORT ownerId;
     SHORT damage;
     struct Shell *next;
 } Shell;
