@@ -368,6 +368,22 @@ RenderMode changeSceneMode(Scene *scene)
     return scene->mode;
 }
 
+RenderMode changeSceneModeBack(Scene *scene)
+{
+    if (!scene->mode)
+        scene->mode = RM_BG;
+    if (scene->mode & RM_V)
+        scene->mode ^= RM_V;
+    else
+    {
+        scene->mode >>= 1;
+        if (scene->mode <= 0)
+            scene->mode = RM_EM;
+        scene->mode |= RM_V;
+    }
+    return scene->mode;
+}
+
 Object *newObjectWithData(SHORT x, SHORT y, SHORT w, SHORT h, CHAR **data)
 {
     Object *obj = (Object *)malloc(sizeof(Object));

@@ -93,6 +93,7 @@ void renderScene(Scene *scene);
 void freeScene(Scene **scenePtr);
 void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ...);
 RenderMode changeSceneMode(Scene *scene);
+RenderMode changeSceneModeBack(Scene *scene);
 Object *newObjectWithData(SHORT x, SHORT y, SHORT w, SHORT h, CHAR **data);
 Object *newObject(SHORT x, SHORT y, SHORT w, SHORT h);
 void rotateObject(Object *obj);

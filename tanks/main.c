@@ -65,6 +65,9 @@ void handleInputEvent(InputEvent e)
             status = S_RESTART;
     }
     else if (e.vkdCode == 'M')
+        if (e.record->Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED)
+            config.mode = changeSceneModeBack(scene);
+        else
         config.mode = changeSceneMode(scene);
     else if (e.vkdCode == VK_OEM_PLUS || e.vkdCode == VK_ADD)
         setConsoleFontSize(hStdOut, ++config.fontSize);
