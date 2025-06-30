@@ -25,7 +25,6 @@ typedef struct
     Object *map;
 } ExplodeParams;
 
-Rgb getShellRgb(Scene *scene, SHORT data);
 void fireShell(Shell **shellPtr, struct Tank *tank);
 void updateShell(Shell **shellPtr, struct Tank **tanks, SHORT tankCount, Object *map, Scene *scene);
 void setSceneShell(Scene *scene, Shell *shell);

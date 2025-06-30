@@ -68,7 +68,7 @@ void handleInputEvent(InputEvent e)
         if (e.record->Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED)
             config.mode = changeSceneModeBack(scene);
         else
-        config.mode = changeSceneMode(scene);
+            config.mode = changeSceneMode(scene);
     else if (e.vkdCode == VK_OEM_PLUS || e.vkdCode == VK_ADD)
         setConsoleFontSize(hStdOut, ++config.fontSize);
     else if (e.vkdCode == VK_OEM_MINUS || e.vkdCode == VK_SUBTRACT)
@@ -146,8 +146,8 @@ void setMessage(void)
     if (tanks[focusOn]->npc)
         setSceneStr(scene, col, row++, Rgb(150, 150, count > 5 ? 150 : 255), "正在观战%d号，按G切换", focusOn);
     SHORT hScale = tanks[focusOn]->health * 255 / tanks[focusOn]->maxHealth;
-    setSceneStr(scene, col, row++, Rgb(255 - hScale, hScale / 2, 0), "血  量: %5d", tanks[focusOn]->health);
     setSceneStr(scene, col, row++, Rgb(120, 80, 60), "弹  药: %5d", tanks[focusOn]->shellCount);
+    setSceneStr(scene, col, row++, Rgb(255 - hScale, hScale / 2, 0), "生命值: %5d", tanks[focusOn]->health);
     setSceneStr(scene, col, row++, Rgb(120, 120, 0), "得  分: %5d", tanks[focusOn]->score);
     if (!tanks[focusOn]->npc)
         setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);

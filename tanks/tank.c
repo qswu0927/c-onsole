@@ -89,7 +89,7 @@ Tank *newTank(SHORT id, Object *map, Scene *scene, bool npc)
     tank->lastMoveQpc = 0;
     tank->interLoadShellMs = 1500;
     tank->lastLoadShellQpc = 0;
-    tank->maxShellCount = 5;
+    tank->maxShellCount = 10;
     tank->maxHealth = 100;
     tank->score = 0;
     tank->killerId = -1;
@@ -98,6 +98,7 @@ Tank *newTank(SHORT id, Object *map, Scene *scene, bool npc)
     if (!npc)
     {
         tank->interMoveMs = INT_MAX;
+        tank->interLoadShellMs = 1200;
         tank->maxHealth = 500;
         tank->focus = true;
     }
@@ -292,7 +293,7 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
         }
     }
     tanks[index]->setDir = dirs[maxDirIndex];
-    if (maxFireIndex == maxDirIndex && maxFireWeight > 30)
+    if (maxFireIndex == maxDirIndex && maxFireWeight > 30 && rand() % 8 == 0)
         fireShell(shellPtr, tanks[index]);
 }
 
@@ -355,27 +356,6 @@ void updateTank(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Ob
     }
 }
 
-Rgb getTankRgb(Scene *scene, SHORT data)
-{
-    if (scene->mode & RM_BG)
-        return Rgbb(40, 120, 0);
-    if (scene->mode & RM_CH)
-    {
-        switch (data)
-        {
-        case 1:
-            return Rgb(147, 112, 219);
-        case 2:
-            return Rgb(0, 128, 0);
-        case 3:
-            return Rgb(0, 191, 255);
-        default:
-            return Rgb(190, 190, 190);
-        }
-    }
-    return Rgb(255, 165, 0);
-}
-
 void setSceneTank(Scene *scene, Tank *tank)
 {
     if (tank->health <= 0)
@@ -389,7 +369,7 @@ void setSceneTank(Scene *scene, Tank *tank)
             if (tank->x + x < scene->camera.x || tank->x + x >= scene->camera.x + scene->camera.w || tank->y + y < scene->camera.y || tank->y + y >= scene->camera.y + scene->camera.h)
                 continue;
             scene->buffer[tank->y + y][tank->x + x].ch = getCh(scene, tank->data[y][x]);
-            Rgb color = getTankRgb(scene, tank->data[y][x]);
+            Rgb color = getRgb(scene, tank->data[y][x], 0, 0);
             if (tank->npc)
                 color.br |= 0x99;
             else

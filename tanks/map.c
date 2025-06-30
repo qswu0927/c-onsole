@@ -64,6 +64,61 @@ wchar_t *getCh(Scene *scene, SHORT data)
     }
 }
 
+Rgb getRgb(Scene *scene, SHORT data, SHORT i, SHORT j)
+{
+    Rgb rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
+
+    if (data == 0)
+        return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];
+
+    if (scene->mode & RM_BG)
+    {
+        switch (data)
+        {
+        case 1:
+            return Rgbb(0, 0, 255);
+        case 10:
+            return Rgbb(255, 160, 20);
+        case 30:
+        case 31:
+        case 32:
+        case 33:
+            return Rgbb(140, 140, 140);
+        default:
+            return Rgbb(40, 120, 0);
+        }
+    }
+    if (scene->mode & RM_CH)
+    {
+        switch (data)
+        {
+        case 1:
+            return (Rgb){160, 160, 160, 0, 0, 255};
+
+        case 10:
+            return Rgb(255, 160, 20);
+
+        case 30:
+        case 31:
+        case 32:
+        case 33:
+            return Rgb(140, 140, 140);
+
+        default:
+            return Rgb(0, 255, 0);
+        }
+    }
+    switch (data)
+    {
+    case 1:
+        return (Rgb){100, 100, 100, 0, 0, 255};
+    case 10:
+        return Rgb(255, 165, 0);
+    default:
+        return Rgb(255, 165, 0);
+    }
+}
+
 bool isTankHit(SHORT x0, SHORT y0, Tank *tank)
 {
     if (tank->health <= 0)
@@ -142,19 +197,6 @@ void updateMap(Object *map, Tank **tanks, SHORT tankCount, Scene *scene, bool ou
     }
 }
 
-Rgb getMapRgb(Scene *scene, CHAR data, SHORT i, SHORT j)
-{
-    Rgb rgbs[] = {{0}, {0, 0, 0, 10, 10, 10}};
-
-    if (data == 0)
-        return rgbs[(i / (scene->camera.h / 2) + j / (scene->camera.w / 2)) % ARRAY_LEN(rgbs)];
-
-    if (scene->mode & RM_BG)
-        return Rgbb(0, 0, 255);
-
-    return (Rgb){100, 100, 100, 0, 0, 255};
-}
-
 void setSceneMap(Scene *scene, Object *map)
 {
     for (SHORT i = 0; i < map->h; i++)
@@ -163,7 +205,7 @@ void setSceneMap(Scene *scene, Object *map)
         {
             scene->buffer[i + map->y][j + map->x].ch = getCh(scene, map->data[i][j]);
 
-            scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(scene, map->data[i][j], i, j);
+            scene->buffer[i + map->y][j + map->x].color.rgb = getRgb(scene, map->data[i][j], i, j);
         }
     }
 }

@@ -210,33 +210,12 @@ void updateShell(Shell **shellPtr, Tank **tanks, SHORT tankCount, Object *map, S
     }
 }
 
-Rgb getShellRgb(Scene *scene, SHORT data)
-{
-    if (scene->mode & RM_BG)
-        return Rgbb(40, 120, 0);
-    if (scene->mode & RM_CH)
-    {
-        switch (data)
-        {
-        case 0:
-            return Rgb(147, 112, 219);
-        case 1:
-            return Rgb(0, 128, 0);
-        case 2:
-            return Rgb(0, 191, 255);
-        default:
-            return Rgb(190, 190, 190);
-        }
-    }
-    return Rgb(255, 165, 0);
-}
-
 void setSceneShell(Scene *scene, Shell *shell)
 {
     for (Shell *node = shell; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getCh(scene, node->data);
-        orColor(&scene->buffer[node->y][node->x].color.rgb, getShellRgb(scene, node->data));
+        orColor(&scene->buffer[node->y][node->x].color.rgb, getRgb(scene, node->data, 0, 0));
     }
 }
 
@@ -245,7 +224,7 @@ void setSceneFrag(Scene *scene, Object *frag)
     for (Object *node = frag; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getCh(scene, node->data[0][0]);
-        orColor(&scene->buffer[node->y][node->x].color.rgb, getShellRgb(scene, node->data[0][0]));
+        orColor(&scene->buffer[node->y][node->x].color.rgb, getRgb(scene, node->data[0][0], 0, 0));
     }
 }
 
