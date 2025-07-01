@@ -27,7 +27,6 @@ typedef struct
 } Config;
 Config config = {.mode = RM_BG, .fontSize = 18, .mute = false, .mouseInput = false, .maxScore = 0};
 
-FrameRate fr;
 SHORT w = 12, h = 22;
 SHORT messageW = 15;
 COORD currentPos;
@@ -82,7 +81,10 @@ void handleInputEvent(InputEvent e)
             status = status == S_READY ? S_PAUSED : S_READY;
     }
     else if (e.vkdCode == 'M')
-        config.mode = changeSceneMode(scene);
+        if (e.record->Event.KeyEvent.dwControlKeyState & SHIFT_PRESSED)
+            config.mode = changeSceneModeBack(scene);
+        else
+            config.mode = changeSceneMode(scene);
     else if (e.vkdCode == VK_OEM_PLUS || e.vkdCode == VK_ADD)
         setConsoleFontSize(hStdOut, ++config.fontSize);
     else if (e.vkdCode == VK_OEM_MINUS || e.vkdCode == VK_SUBTRACT)

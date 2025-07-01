@@ -323,8 +323,18 @@ void setSceneStr(Scene *scene, SHORT x, SHORT y, Rgb rgb, const char *format, ..
         {
             // Emoji（代理对，占 2 个 wchar_t）
             scene->buffer[y][x].ch = (wchar_t *)malloc(3 * sizeof(wchar_t));
-            scene->buffer[y][x].ch[0] = wbuffer[i++];
-            scene->buffer[y][x].ch[1] = wbuffer[i++];
+            if (scene->mode & RM_V)
+            {
+                scene->buffer[y][x].ch[0] = wbuffer[i++];
+                scene->buffer[y][x].ch[1] = wbuffer[i++];
+            }
+            else
+            {
+                // 不支持，直接显示空白，避免显示乱码
+                scene->buffer[y][x].ch[0] = ' ';
+                scene->buffer[y][x].ch[1] = ' ';
+                i += 2;
+            }
             scene->buffer[y][x].ch[2] = L'\0';
         }
         else
