@@ -23,7 +23,8 @@ Snake *newSnake(Object *map, bool npc)
     snake->tail = NULL;
     snake->dir = dir;
     snake->setDir = dir;
-    snake->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
+    // snake->speed = SPEED_L / 2 + rand() % (SPEED_L * 2);
+    snake->speed = SPEED_H - rand() % (SPEED_L);
     snake->tick = 0;
     snake->alive = true;
     snake->score = 0;
@@ -236,7 +237,7 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
         snakes[index]->score++;
         // 在可视区域内才播放音效
         if (x >= scene->camera.x && x < scene->camera.x + scene->camera.w && y >= scene->camera.y && y < scene->camera.y + scene->camera.h)
-            playSoundSeq(3, 400 + eat * 200, 5, 0);
+            playSoundSeq(3, snakes[index]->focus ? 400 + eat * 200 : 300, 6, 0);
         Node *newNode = (Node *)malloc(sizeof(Node));
         newNode->data = eat;
         // 新节点位置是原头部位置
@@ -306,6 +307,10 @@ void updateSnake(Snake **snakes, SHORT snakeCount, SHORT index, Food *food, Obje
             // 转成食物
             for (Node *node = snakes[index]->tail; node != NULL; node = node->next)
             {
+                // 散开
+                // node->x += rand() % 3 - 1;
+                // node->y += rand() % 3 - 1;
+
                 // 避免正在穿墙的蛇转成食物卡在墙里
                 if (node->x <= map->x || node->x >= map->x + map->w - 1 || node->y <= map->y || node->y >= map->y + map->h - 1)
                     continue;
@@ -348,7 +353,7 @@ void setSceneSnake(Scene *scene, Snake *snake)
             color.bg |= 0xaa;
         if (snake->focus)
             color.bb |= 0xcc;
-        scene->buffer[node->y][node->x].color.rgb = node->next == NULL ? (scene->mode & RM_EM ? Rgb(50, 200, 0) : Rgbb(190, 200, 0)) : color;
+        orColor(&scene->buffer[node->y][node->x].color.rgb, node->next == NULL ? (scene->mode & RM_EM ? Rgb(50, 200, 0) : Rgbb(190, 200, 0)) : color);
     }
 }
 

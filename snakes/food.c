@@ -102,7 +102,7 @@ void setSceneFood(Scene *scene, Food *food)
     for (Node *node = food->first; node != NULL; node = node->next)
     {
         scene->buffer[node->y][node->x].ch = getFoodCh(scene, node->data);
-        scene->buffer[node->y][node->x].color.rgb = getFoodRgb(scene, node->data);
+        orColor(&scene->buffer[node->y][node->x].color.rgb, getFoodRgb(scene, node->data));
     }
 }
 

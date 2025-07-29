@@ -292,6 +292,11 @@ void autoPilot(Tank **tanks, SHORT tankCount, SHORT index, Shell **shellPtr, Obj
             maxFireIndex = i;
         }
     }
+    // 小概率随机方向，避免两玩家出现死锁
+    if (rand() % 10 == 0)
+    {
+        maxDirIndex = rand() % 4;
+    }
     tanks[index]->setDir = dirs[maxDirIndex];
     if (maxFireIndex == maxDirIndex && maxFireWeight > 30 && rand() % 8 == 0)
         fireShell(shellPtr, tanks[index]);

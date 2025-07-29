@@ -386,7 +386,7 @@ void setSceneBlock(Scene *scene, Object *block, Object *map, bool showShadow)
                 scene->buffer[i + block->y][j + block->x].ch = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockCh(block->status == B_BOMB ? 8 : block->data[i][j], scene) : _wcsdup(L"  ");
 
             if (block->data[i][j])
-                scene->buffer[i + block->y][j + block->x].color.rgb = block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockColor(block->status == B_BOMB ? 8 : block->data[i][j], scene) : Rgb(0, 0, 0);
+                orColor(&scene->buffer[i + block->y][j + block->x].color.rgb, block->status != B_BOMB || currentTime - lastTime > 50 ? getBlockColor(block->status == B_BOMB ? 8 : block->data[i][j], scene) : Rgb(0, 0, 0));
         }
     }
 }

@@ -28,14 +28,14 @@ typedef struct
 } Config;
 Config config = {.mode = RM_CH, .fontSize = 18, .mute = false, .maxScore = 0};
 
-SHORT w = 25, h = 25;
-SHORT messageW = 15;
+SHORT w = 20, h = 17;
+SHORT messageW = 12;
 Status status = S_START;
 
 Scene *scene = NULL;
 Object *map = NULL;
 Snake **snakes = NULL;
-SHORT snakeCount = 10;
+SHORT snakeCount = 5;
 SHORT aliveCount = 0;
 SHORT focusOn = 0;
 Food *food = NULL;
@@ -90,6 +90,7 @@ void handleInputEvent(InputEvent e)
 
 void setCamera(void)
 {
+    static SHORT x = 0, y = 0;
     static SHORT count = 0;
     if (snakes[focusOn]->alive == false)
         count++;
@@ -104,18 +105,28 @@ void setCamera(void)
     while (node->next != NULL)
         node = node->next;
 
-    scene->camera.x = node->x - (scene->camera.w - messageW) / 2;
-    scene->camera.y = node->y - scene->camera.h / 2;
+    x = node->x - (scene->camera.w - messageW) / 2;
+    y = node->y - scene->camera.h / 2;
 
     // 限位
-    if (scene->camera.x + scene->camera.w > scene->w)
-        scene->camera.x = scene->w - scene->camera.w;
-    if (scene->camera.y + scene->camera.h > scene->h)
-        scene->camera.y = scene->h - scene->camera.h;
-    if (scene->camera.x < 0)
-        scene->camera.x = 0;
-    if (scene->camera.y < 0)
-        scene->camera.y = 0;
+    if (x + scene->camera.w > scene->w)
+        x = scene->w - scene->camera.w;
+    if (y + scene->camera.h > scene->h)
+        y = scene->h - scene->camera.h;
+    if (x < 0)
+        x = 0;
+    if (y < 0)
+        y = 0;
+
+    // 逐步移动到目标位置
+    if (scene->camera.x < x)
+        scene->camera.x++;
+    if (scene->camera.x > x)
+        scene->camera.x--;
+    if (scene->camera.y < y)
+        scene->camera.y++;
+    if (scene->camera.y > y)
+        scene->camera.y--;
 }
 
 void setMessage(void)
@@ -186,6 +197,9 @@ START:
     for (SHORT i = 0; i < snakeCount; i++)
         snakes[i] = newSnake(map, i > 0);
     focusOn = 0;
+    // 相机就位，聚焦玩家
+    scene->camera.x = map->w / 2 - (scene->camera.w - messageW) / 2;
+    scene->camera.y = map->h / 2 - scene->camera.h / 2;
 
     if (food)
         freeFood(&food);

@@ -214,7 +214,7 @@ void setupConsole(SHORT w, SHORT h, SHORT fontSize, wchar_t *title)
     if (!SetConsoleScreenBufferSize(hStdOut, (COORD){maxSize.X, maxSize.Y}))
     {
         printf("无法设置缓冲区! 错误: %lu\n按回车键继续", GetLastError());
-        getchar();
+        // getchar();
     }
     // 4. 缩小窗口到目标尺寸
     if (!SetConsoleWindowInfo(hStdOut, TRUE, &(SMALL_RECT){0, 0, w - 1, h - 1}))
@@ -237,7 +237,7 @@ void setupConsole(SHORT w, SHORT h, SHORT fontSize, wchar_t *title)
 
 // 调试模式下，将窗口置顶
 #ifdef _DEBUG
-    setConsoleWindowTopmost();
+    // setConsoleWindowTopmost();
 #endif
     // setConsoleWindowCenter();
     hideConsoleCursor();

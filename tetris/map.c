@@ -78,11 +78,14 @@ Rgb getMapRgb(Object *map, SHORT i, SHORT j, Scene *scene)
     if (i == 0 || i == map->h - 1 || j == 0 || j == map->w - 1)
         return (Rgb){0, 0, 0, 0, 65, 65};
 
-    if (map->data[i][j])
-        return getBlockColor(map->data[i][j], scene);
-
     Rgb rgbs[] = {{0}, {0, 0, 0, 12, 12, 12}};
-    return rgbs[(i + j) % 2];
+
+    Rgb rgb = rgbs[(i + j) % 2];
+
+    if (map->data[i][j])
+        orColor(&rgb, getBlockColor(map->data[i][j], scene));
+
+    return rgb;
 }
 
 void setSceneMap(Scene *scene, Object *map)
@@ -93,7 +96,7 @@ void setSceneMap(Scene *scene, Object *map)
         {
             scene->buffer[i + map->y][j + map->x].ch = getMapCh(map, i, j, scene);
 
-            scene->buffer[i + map->y][j + map->x].color.rgb = getMapRgb(map, i, j, scene);
+            orColor(&scene->buffer[i + map->y][j + map->x].color.rgb, getMapRgb(map, i, j, scene));
         }
     }
 }
