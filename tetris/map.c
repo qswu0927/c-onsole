@@ -61,7 +61,7 @@ void addMapLine(Object *map)
 
 void updateMap(Object *map)
 {
-    if (rand() % 400 == 0)
+    if (rand() % 50 == 0)
         addMapLine(map);
 }
 

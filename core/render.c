@@ -375,9 +375,12 @@ RenderMode changeSceneMode(Scene *scene)
     }
     else
         scene->mode |= RM_V;
+
     // 跳过
-    if (scene->mode == 4)
+    // if (scene->mode == 4)
+    if (!(scene->mode & RM_V))
         return changeSceneMode(scene);
+
     return scene->mode;
 }
 

@@ -28,8 +28,8 @@ typedef struct
 } Config;
 Config config = {.mode = RM_CH, .fontSize = 18, .mute = false, .maxScore = 0};
 
-SHORT w = 25, h = 25;
-SHORT messageW = 15;
+SHORT w = 25, h = 20;
+SHORT messageW = 12;
 Status status = S_START;
 
 Scene *scene = NULL;
@@ -152,6 +152,7 @@ void setMessage(void)
     if (!tanks[focusOn]->npc)
         setSceneStr(scene, col, row++, Rgb(150, 100, 0), "最高分: %5d", config.maxScore);
     setSceneStr(scene, col, row++, Rgb(120, 120, 120), "移动: WASD|方向键");
+    setSceneStr(scene, col, row++, Rgb(120, 120, 120), "开火: 空格键");
     if (tanks[0]->health <= 0)
     {
         setSceneStr(scene, col, row++, Rgb(0, count > 5 ? 200 : 100, 0), "重新开始: P键");
